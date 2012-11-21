@@ -38,3 +38,39 @@ You can access this property as
 or
 : http["createServer"]
 The result is the same either way.
+
+*** creating functions
+Functions in JavaScript are created with the "function" keyword.
+There are two ways to use this keyword: function expressions and function definitions.
+A function expression evaluates to a function but doesn't put that function into your scope.
+A function definition creates a variable for your function.
+It does this in such a way that
+ everything in the scope in which you defined the function
+ can use the variable,
+ even lines before the declaration!
+This is called "hoisting", and you don't need to know much about it right now.
+Just know that you can reference functions defined this way before you define them.
+A function expression looks like
+: function functionName(paramOne, paramTwo, paramThree, etc){
+:  //function body
+: }
+Note that it does not declare any types.
+JavaScript doesn't care about your types.
+A function expression doesn't need to have a function name.
+You can make anonymous functions like
+: function(paramOne, paramTwo, etc){/* do stuff */}
+if you want.
+If a function expression with a name is a statement all by itself,
+ then it becomes a function definition and can be referenced by anything else in that scope.
+It's as if you typed
+: var functionName = function functionName(paramOne, etc){};
+Functions are values that can be passed around like anything else.
+You can assign variables to be equal to function values.
+JavaScript doesn't care if the value of the variable wasn't a function before.
+For the most part, JavaScript doesn't care about your types.
+Everything is a value, and most values are objects.
+In fact, functions act like dictionaries just like objects do.
+You can say
+: var foo = function bar(x, y){return x;};
+: foo.baz = "quux";
+and foo will be a function with a "baz" property.
