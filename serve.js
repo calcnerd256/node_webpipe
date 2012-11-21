@@ -43,8 +43,6 @@ function fluentCall(object, key, parameters){
  return object;
 }
 function respond(request, response){
- var q = request;
- var s = response;
  //HTTP has the notion of "methods"
  //most requests are GET requests
  // a GET request basically just asks for a page
@@ -54,32 +52,15 @@ function respond(request, response){
  // but in practical reality, there are limits to the lengths of GET parameters
  // and I wanted users to be able to post big .dot files and get big SVGs back out
  // so I had to compromise on theoretical purity :(
+
+ //one-line if()s are a stylistic no-no
+ // but I like them a lot, so I'm using them
+ // I use them wherever I can, often to the detriment of readability
  if("GET" == request.method)
   return handleGet(request, response);
-  s.writeHead(200, {"Content-type": "image/svg+xml"});
-  (
-   function(p){
-    var dat = [];
-    q.on("data", function(chunk){dat.push(chunk);});//buffering is bad
-    q.on(
-     "end",
-     function(){
-      var a = dat.join("").split(";").map(
-       function(str){
-	return str.split("=").map(decodeURIComponent);
-       }
-      );
-      var d = a.reduce(function(p, c){p[c[0]] = c[1]; return p;}, {});
-      var str = d.str;
-      p.stdin.write(str+"");
-      p.stdin.end();
-     }
-    );
-    p.stdout.on("data", function(chunk){s.write(chunk);});
-    p.stdout.on("end", function(){s.end();});
-   }
-  )(require("child_process").spawn("dot", ["-Tsvg"]));
+ return handlePost(request, response);
 }
+
 
 function handleGet(request, response){
  //before, this behavior was implemented as a one-liner
@@ -131,7 +112,32 @@ function handleGet(request, response){
  response.write(body);
  response.end();
 }
-function handlePost(request, response){
+
+
+function handlePost(q, s){
+  s.writeHead(200, {"Content-type": "image/svg+xml"});
+  (
+   function(p){
+    var dat = [];
+    q.on("data", function(chunk){dat.push(chunk);});//buffering is bad
+    q.on(
+     "end",
+     function(){
+      var a = dat.join("").split(";").map(
+       function(str){
+	return str.split("=").map(decodeURIComponent);
+       }
+      );
+      var d = a.reduce(function(p, c){p[c[0]] = c[1]; return p;}, {});
+      var str = d.str;
+      p.stdin.write(str+"");
+      p.stdin.end();
+     }
+    );
+    p.stdout.on("data", function(chunk){s.write(chunk);});
+    p.stdout.on("end", function(){s.end();});
+   }
+  )(require("child_process").spawn("dot", ["-Tsvg"]));
 }
 
 //the createServer function of the http library is a helper
