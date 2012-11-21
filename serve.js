@@ -107,24 +107,29 @@ function handleGet(request, response){
   "  <title>Online GraphViz tool</title>",
   " </head>",
   " <body>",
-  "<form method=\"POST\">",
-  " <textarea name=\"str\">",
+  "  <form method=\"POST\">",
+  "   <textarea name=\"str\">",
   "digraph{",
    "a->b;",
   "}",
-  " </textarea>",
-  " <input type=\"submit\"></input>",
-  "</form>",
+  "   </textarea>",
+  "   <input type=\"submit\"></input>",
+  "  </form>",
   " </body>",
   "</html>"
  ];
+ //the Array() class has a method someArray.join(glue) that creates a string
+ //it puts the glue string between the result of calling each element's someElement.toString() method
  var body = lines.join("\n")
+
+ //now that we have all our data, let's send it to the client
 
  //the author of the writeHead method was nice enough to handle optional arguments
  //I omitted the second argument, but it works anyway, because they shuffle them around based on their types
  response.writeHead(statusCode, headers);
 
- response.end(body);
+ response.write(body);
+ response.end();
 }
 function handlePost(request, response){
 }
