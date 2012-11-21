@@ -15,7 +15,7 @@ The NodeJS [[http://nodejs.org/api/][documentation]] is good if you already know
 NodeJS includes a bunch of libraries.
 You can get to these libraries from within your JavaScript by using the [[http://www.commonjs.org/][CommonJS]] interface.
 For now, all you need to know is that that means you use a function called "require"
- and pass a string to it and it returns on object representing the module you want to include.
+ and pass a string to it and it returns an object representing the module you want to include.
 *** using CommonJS to include other libraries
 The syntax for function calls in JavaScript looks like that of C.
 String literals look like those in C.
