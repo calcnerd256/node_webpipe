@@ -91,9 +91,22 @@ function handleGet(request, response){
  //the default MIMEtype is text/plain
  //I want to serve up an HTML form
  var contentType = "text/html";
+ //this is an object literal
+ //this syntax is now known as JSON
+ // (JavaScript Object Notation)
  var headers = {"Content-type": contentType};
 
+ //this is an array literal
+ //rather than read the response body in from a file, I've decided to put it right in the server's source
+ //but I didn't want to have to put it all on one line
+ // so I made it an array of the lines I wanted
+ // and later, I'll join those lines with a linefeed character (ASCII ten)
  var lines = [
+  "<html>",
+  " <head>",
+  "  <title>Online GraphViz tool</title>",
+  " </head>",
+  " <body>",
   "<form method=\"POST\">",
   " <textarea name=\"str\">",
   "digraph{",
@@ -101,7 +114,9 @@ function handleGet(request, response){
   "}",
   " </textarea>",
   " <input type=\"submit\"></input>",
-  "</form>"
+  "</form>",
+  " </body>",
+  "</html>"
  ];
  var body = lines.join("\n")
 
