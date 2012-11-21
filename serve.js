@@ -45,26 +45,17 @@ function fluentCall(object, key, parameters){
 function respond(request, response){
  var q = request;
  var s = response;
-  if("GET" == q.method)
-   return fluentCall(
-    response,
-    "writeHead",
-    [
-     200,
-     {"Content-type": "text/html"}
-    ]
-   ).end(
-    [
-     "<form method=\"POST\">",
-     "<textarea name=\"str\">",
-     "digraph{",
-      "a->b;",
-     "}",
-     "</textarea>",
-     "<input type=\"submit\"></input>",
-     "</form>"
-     ].join("\n")
-   );
+ //HTTP has the notion of "methods"
+ //most requests are GET requests
+ // a GET request basically just asks for a page
+ //some requests are POST requests
+ // any time you're submitting information that's supposed to change something, that's a POST
+ //technically, the server in this example should not be using POST
+ // but in practical reality, there are limits to the lengths of GET parameters
+ // and I wanted users to be able to post big .dot files and get big SVGs back out
+ // so I had to compromise on theoretical purity :(
+ if("GET" == request.method)
+  return handleGet(request, response);
   s.writeHead(200, {"Content-type": "image/svg+xml"});
   (
    function(p){
@@ -88,6 +79,30 @@ function respond(request, response){
     p.stdout.on("end", function(){s.end();});
    }
   )(require("child_process").spawn("dot", ["-Tsvg"]));
+}
+
+function handleGet(request, response){
+   return fluentCall(
+    response,
+    "writeHead",
+    [
+     200,
+     {"Content-type": "text/html"}
+    ]
+   ).end(
+    [
+     "<form method=\"POST\">",
+     "<textarea name=\"str\">",
+     "digraph{",
+      "a->b;",
+     "}",
+     "</textarea>",
+     "<input type=\"submit\"></input>",
+     "</form>"
+     ].join("\n")
+   );
+}
+function handlePost(request, response){
 }
 
 //the createServer function of the http library is a helper
