@@ -1,9 +1,16 @@
 //http library documented at http://nodejs.org/api/http.html
 var http = require("http");
 var port = 15216; //typically 80
-// respond is a function that takes an HTTP request and an HTTP response
-// when a request comes in, the http library fires an event
-// at the end of this file, I'm going to do something that binds this function to that event
+
+//the createServer function of the http library is a helper
+// it takes a function and returns an HTTP server
+// that callback function gets bound to the request event
+var server = http.createServer(respond);
+//now that I have a server, it needs to start listening for incoming connections
+server.listen(port,  afterServerSetup);
+//now that you have an HTTP server listening on a port, the program won't end
+//if you need to end the program, you can press Ctrl+C at the command line
+
 function fluentCall(object, key, parameters){
  //sometimes, we want to call a method on an object and then call another one
  // as in, someObject.someMethod(x, y, z); someObject.anothermethod(w);
@@ -42,6 +49,11 @@ function fluentCall(object, key, parameters){
  //now, to make the helper act like a fluent call
  return object;
 }
+
+//respond is a function that takes an HTTP request and an HTTP response
+//when a request comes in, the http library fires an event
+//the createServer function binds whatever you pass to it to that event
+
 function respond(request, response){
  //HTTP has the notion of "methods"
  //most requests are GET requests
@@ -140,21 +152,22 @@ function handlePost(q, s){
   )(require("child_process").spawn("dot", ["-Tsvg"]));
 }
 
-//the createServer function of the http library is a helper
-// it takes a function and returns an HTTP server
-// that callback function gets bound to the request event
-var server = http.createServer(respond);
-//now that I have a server, it needs to start listening for incoming connections
-server.listen(
- port,
- function(){
-  //this function gets called when the server is ready to take requests
-  //everything in NodeJS is asynchronous
-  // so you have to pass continuations explicitly
-  //uncomment the following line if you want to see when it starts
-  //console.log("server listening on port " + port);
-  // the console object prints to standard output by default
+function afterServerSetup(){
+ //this function gets called when the server is ready to take requests
+ //everything in NodeJS is asynchronous
+ // so you have to pass continuations explicitly
+
+ var noisy = false;
+ //uncomment the following line if you want to see when it starts
+ //noisy = true;
+
+ //this line demonstrates string concatenation coercing and lexical scoping
+ var output = "server listening on port " + port;
+ //port is a number, but it coerces to a string when I try to append it to a string
+ //port is a variable defined in the file's scope, but I can still use it in this function
+ // I can still use the port variable even when I pass this function to another function that calls afterServerSetup
+
+ if(noisy)
+  console.log(output);
+ // the console object prints to standard output by default
  }
-);
-//now that you have an HTTP server listening on a port, the program won't end
-//if you need to end the program, you can press Ctrl+C at the command line
