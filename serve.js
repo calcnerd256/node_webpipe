@@ -82,25 +82,34 @@ function respond(request, response){
 }
 
 function handleGet(request, response){
-   return fluentCall(
-    response,
-    "writeHead",
-    [
-     200,
-     {"Content-type": "text/html"}
-    ]
-   ).end(
-    [
-     "<form method=\"POST\">",
-     "<textarea name=\"str\">",
-     "digraph{",
-      "a->b;",
-     "}",
-     "</textarea>",
-     "<input type=\"submit\"></input>",
-     "</form>"
-     ].join("\n")
-   );
+ //before, this behavior was implemented as a one-liner
+ //but that makes it hard to read, so I'm rewriting it
+ //which means my only use of fluentCall is no longer necessary
+
+ //HTTP status code 200 means "OK"
+ var statusCode = 200;
+ //the default MIMEtype is text/plain
+ //I want to serve up an HTML form
+ var contentType = "text/html";
+ var headers = {"Content-type": contentType};
+
+ var lines = [
+  "<form method=\"POST\">",
+  " <textarea name=\"str\">",
+  "digraph{",
+   "a->b;",
+  "}",
+  " </textarea>",
+  " <input type=\"submit\"></input>",
+  "</form>"
+ ];
+ var body = lines.join("\n")
+
+ //the author of the writeHead method was nice enough to handle optional arguments
+ //I omitted the second argument, but it works anyway, because they shuffle them around based on their types
+ response.writeHead(statusCode, headers);
+
+ response.end(body);
 }
 function handlePost(request, response){
 }
