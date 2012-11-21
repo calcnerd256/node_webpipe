@@ -1,0 +1,40 @@
+* NodeJS server for GraphViz
+** What it does
+If you run serve.js with [[http://www.nodejs.org][NodeJS]], it will create a webserver on your computer.
+This webserver will listen on port 15216 until you kill the process.
+You can kill it with C-c (that is, Control+C) at the command line whence you ran it.
+You can visit your webserver at [[http://127.0.0.1:15216/]].
+You will need [[http://www.graphviz.org][GraphViz]] for this to work.
+
+** NodeJS
+serve.js is written in [[http://docs.webplatform.org/wiki/javascript][JavaScript]].
+Particularly, it is written in [[http://www.nodejs.org][Node]], a command-line [[http://code.google.com/p/v8/][V8]] with [[http://www.opengroup.org/austin/papers/posix_faq.html][POSIX]]-like libraries.
+Not familiar with Node or even JS at all? Good! This whole thing is for teaching.
+The NodeJS [[http://nodejs.org/api/][documentation]] is good if you already know JS. Let's suppose you don't.
+*** CommonJS
+NodeJS includes a bunch of libraries.
+You can get to these libraries from within your JavaScript by using the [[http://www.commonjs.org/][CommonJS]] interface.
+For now, all you need to know is that that means you use a function called "require"
+ and pass a string to it and it returns on object representing the module you want to include.
+*** using CommonJS to include other libraries
+The syntax for function calls in JavaScript looks like that of C.
+String literals look like those in C.
+So that means that requiring the HTTP library (for example) involves typing something like
+: require("http")
+and that that expression evaluates to an object.
+But what do we do with that object? Let's store it in a variable!
+How do I create a variable in JavaScript?
+The "var" keyword is how to create a variable in the local scope.
+JavaScript has [[http://c2.com/cgi/wiki?LexicalScoping][lexical scoping]].
+For now, we'll just create some variables at the file-level scope and not worry about what that means.
+: var http = require("http");
+Now you have a variable called http, and its value is an object.
+An object in JavaScript is (basically) just a dictionary.
+That is, it maps string keys to values.
+Key lookup can be done with either the dot notation or the bracket notation.
+For instance, the http object returned by that require statement has a property called "createServer".
+You can access this property as
+: http.createServer
+or
+: http["createServer"]
+The result is the same either way.
