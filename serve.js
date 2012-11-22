@@ -92,12 +92,23 @@ function handlePost(request, response){
  var q = request;
  var s = response;
  response.writeHead(200, {"Content-type": "image/svg+xml"});
- var kid = child_process.spawn("dot", ["-Tsvg"]);
+ var command = "dot";//this is what you would run at the command line
+ var graphvizFlags = ["-Tsvg"];//see the graphviz manpage for details
+ var kid = child_process.spawn(command, graphvizFlags);
  var p = kid;
-    var dat = [];
-    q.on("data", function(chunk){dat.push(chunk);});//buffering is bad
-    q.on(
-     "end",
+ //data from the request doesn't come in all at once
+ //we either need to stream it or buffer it
+ //buffering is easier to write, but it has its drawbacks
+ var data = [];
+ var dat = data;
+ request.on(
+  "data",
+  function(chunk){
+   //buffering is bad
+   //but it's easier to write
+   data.push(chunk);
+  }
+ );
      function afterRequest(){
       var a = dat.join("").split(";").map(
        function(str){
@@ -109,7 +120,8 @@ function handlePost(request, response){
       p.stdin.write(str+"");
       p.stdin.end();
      }
-    );
+ //afterRequest processes the contents of the buffer collected from the "data" events
+ request.on("end", afterRequest);
  //redirect the standard output of the child process to the HTTP response body
     p.stdout.on("data", function(chunk){s.write(chunk);});
     p.stdout.on("end", function(){s.end();});
