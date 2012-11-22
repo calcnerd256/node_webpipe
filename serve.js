@@ -109,17 +109,27 @@ function handlePost(request, response){
    data.push(chunk);
   }
  );
-     function afterRequest(){
-      var a = dat.join("").split(";").map(
-       function(str){
+ function afterRequest(){
+  var postBody = data.join("");
+  var postParameters = postBody.split(";"); // I'll have to check the RFC
+  var alist = postParameters.map(
+   function decodePostParameter(str){
 	return str.split("=").map(decodeURIComponent);
-       }
-      );
-      var d = a.reduce(function(p, c){p[c[0]] = c[1]; return p;}, {});
-      var str = d.str;
-      p.stdin.write(str+"");
-      p.stdin.end();
-     }
+   }
+  );
+  var dictionary = alist.reduce(
+   function(p, c){
+    p[c[0]] = c[1];
+    return p;
+   },
+   {}
+  );
+  var str = dictionary.str+"";
+
+  //send the whole thing along to the child process
+  kid.stdin.write(str);
+  kid.stdin.end();
+ }
  //afterRequest processes the contents of the buffer collected from the "data" events
  request.on("end", afterRequest);
  //redirect the standard output of the child process to the HTTP response body
