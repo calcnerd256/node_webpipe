@@ -156,6 +156,11 @@ function handlePost(request, response){
  //afterRequest processes the contents of the buffer collected from the "data" events
  request.on("end", afterRequest);
  //redirect the standard output of the child process to the HTTP response body
-    p.stdout.on("data", function(chunk){s.write(chunk);});
-    p.stdout.on("end", function(){s.end();});
+ kid.stdout.on(
+  "data",
+  function(chunk){
+   response.write(chunk);
+  }
+ );
+ kid.stdout.on("end", function(){response.end();});
 }
