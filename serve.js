@@ -1,5 +1,7 @@
+
 //http library documented at http://nodejs.org/api/http.html
 var http = require("http");
+var child_process = require("child_process");
 var port = 15216; //typically 80
 
 //the createServer function of the http library is a helper
@@ -86,15 +88,17 @@ function handleGet(request, response){
 }
 
 
-function handlePost(q, s){
-  s.writeHead(200, {"Content-type": "image/svg+xml"});
-  (
-   function(p){
+function handlePost(request, response){
+ var q = request;
+ var s = response;
+ response.writeHead(200, {"Content-type": "image/svg+xml"});
+ var kid = child_process.spawn("dot", ["-Tsvg"]);
+ var p = kid;
     var dat = [];
     q.on("data", function(chunk){dat.push(chunk);});//buffering is bad
     q.on(
      "end",
-     function(){
+     function afterRequest(){
       var a = dat.join("").split(";").map(
        function(str){
 	return str.split("=").map(decodeURIComponent);
@@ -106,10 +110,9 @@ function handlePost(q, s){
       p.stdin.end();
      }
     );
+ //redirect the standard output of the child process to the HTTP response body
     p.stdout.on("data", function(chunk){s.write(chunk);});
     p.stdout.on("end", function(){s.end();});
-   }
-  )(require("child_process").spawn("dot", ["-Tsvg"]));
 }
 
 function afterServerSetup(){
