@@ -74,3 +74,21 @@ You can say
 : var foo = function bar(x, y){return x;};
 : foo.baz = "quux";
 and foo will be a function with a "baz" property.
+JavaScript doesn't require semicolons most of the time, but you should use them anyway.
+
+*** callback functions
+NodeJS follows an explicit [[http://c2.com/cgi/wiki?ContinuationPassingStyle][continuation]]-passing style.
+This means that instead of waiting for some library call to complete,
+ you pass it a function that it calls when it's done.
+This works really well for asynchronous calls, especially I/O.
+Here's an example of how one might pass a continuation:
+: function doSomething(callback){
+:  console.log("first");
+:  callback("second");
+: }
+: function doAnotherThing(result){
+:  console.log(result);
+: }
+: doSomething(doAnotherThing);
+: console.log("third");
+The above example passes a function doAnotherThing to a function doSomething, which calls it.
