@@ -92,3 +92,7 @@ Here's an example of how one might pass a continuation:
 : doSomething(doAnotherThing);
 : console.log("third");
 The above example passes a function doAnotherThing to a function doSomething, which calls it.
+doAnotherThing is the continuation, and doSomething takes a continuation as its only parameter.
+A more realistic example would be:
+: var filesystem = require("fs");
+: filesystem.readdir(".", function(err, files){console.log(files);});
