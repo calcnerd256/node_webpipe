@@ -13,6 +13,31 @@ server.listen(port,  afterServerSetup);
 //now that you have an HTTP server listening on a port, the program won't end
 //if you need to end the program, you can press Ctrl+C at the command line
 
+//after your server is ready, but before it receives any requests, it runs this function
+//you can call this function whatever you want, as long as you pass it to server.listen as the second parameter
+//of course, you can also call server whatever you want, as long as it's the result of a call to http.createServer
+//and you can call http whatever you want, as long as it's the result of require("http")
+function afterServerSetup(){
+ //this function gets called when the server is ready to take requests
+ //everything in NodeJS is asynchronous
+ // so you have to pass continuations explicitly
+
+ var noisy = false;
+ //uncomment the following line if you want to see when it starts
+ //noisy = true;
+
+ //this line demonstrates string concatenation coercing and lexical scoping
+ var output = "server listening on port " + port;
+ //port is a number, but it coerces to a string when I try to append it to a string
+ //port is a variable defined in the file's scope, but I can still use it in this function
+ // I can still use the port variable even when I pass this function to another function that calls afterServerSetup
+
+ if(noisy)
+  console.log(output);
+ // the console object prints to standard output by default
+ }
+
+
 //respond is a function that takes an HTTP request and an HTTP response
 //when a request comes in, the http library fires an event
 //the createServer function binds whatever you pass to it to that event
@@ -134,23 +159,3 @@ function handlePost(request, response){
     p.stdout.on("data", function(chunk){s.write(chunk);});
     p.stdout.on("end", function(){s.end();});
 }
-
-function afterServerSetup(){
- //this function gets called when the server is ready to take requests
- //everything in NodeJS is asynchronous
- // so you have to pass continuations explicitly
-
- var noisy = false;
- //uncomment the following line if you want to see when it starts
- //noisy = true;
-
- //this line demonstrates string concatenation coercing and lexical scoping
- var output = "server listening on port " + port;
- //port is a number, but it coerces to a string when I try to append it to a string
- //port is a variable defined in the file's scope, but I can still use it in this function
- // I can still use the port variable even when I pass this function to another function that calls afterServerSetup
-
- if(noisy)
-  console.log(output);
- // the console object prints to standard output by default
- }
