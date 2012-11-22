@@ -96,3 +96,33 @@ doAnotherThing is the continuation, and doSomething takes a continuation as its 
 A more realistic example would be:
 : var filesystem = require("fs");
 : filesystem.readdir(".", function(err, files){console.log(files);});
+
+*** webservers in Node
+This is better documented at the NodeJS website.
+I'll just explain the parts of it that this example uses.
+require("http") returns the NodeJS HTTP [[http://www.nodejs.org/api/http.html][library]].
+It has a helper method called createServer,
+ which takes a callback function as a parameter.
+This callback function is responsible for responding to HTTP requests.
+Node has the notion of an event emitter.
+An event emitter can register subscribers
+ and then publish events to these subscribers.
+A subscriber registers with a particular channel of an event emitter.
+The channels are string names.
+A webserver in Node emits "request" events (among others).
+When you tell an event emitter to emit an event,
+ you can pass additional parameters to it.
+The event emitter passes these parameters to the listener (subscriber).
+The "request" events come with two additional parameters: a request object and a response object.
+The request and response objects are also event emitters.
+The callback you passed to createServer is responsible for responding to HTTP requests.
+It does so by telling the response object to emit events.
+Here is an example of a webserver that always says the same thing:
+: require("http").createServer(function(request, response){response.end("Hello, World!")}).listen(8080);
+If you ran that, then any HTTP request to [[http://127.0.0.1:8080/]] would show a web page with the hello-world text.
+But so would a request to [[http://127.0.0.1:8080/any/path/you/ask/for]].
+This is because the path is part of the request object,
+ and the function in that example doesn't change its behavior
+ based on anything in that object.
+Writing a webserver in NodeJS basically entails taking the line in the above example and changing the function in the middle.
+How that function transforms events emitted by the request parameter into events to emit on the response parameter is how your website behaves.
