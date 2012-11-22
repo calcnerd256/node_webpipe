@@ -89,18 +89,14 @@ function handleGet(request, response){
 
 
 function handlePost(request, response){
- var q = request;
- var s = response;
  response.writeHead(200, {"Content-type": "image/svg+xml"});
  var command = "dot";//this is what you would run at the command line
  var graphvizFlags = ["-Tsvg"];//see the graphviz manpage for details
  var kid = child_process.spawn(command, graphvizFlags);
- var p = kid;
  //data from the request doesn't come in all at once
  //we either need to stream it or buffer it
  //buffering is easier to write, but it has its drawbacks
  var data = [];
- var dat = data;
  request.on(
   "data",
   function(chunk){
@@ -114,15 +110,17 @@ function handlePost(request, response){
   var postParameters = postBody.split(";"); // I'll have to check the RFC
   var alist = postParameters.map(
    function decodePostParameter(str){
-	return str.split("=").map(decodeURIComponent);
+    return str.split("=").map(decodeURIComponent);
    }
   );
   var dictionary = alist.reduce(
-   function(p, c){
-    p[c[0]] = c[1];
-    return p;
+   function fluentPatch(previous, current){
+    var key = current[0];
+    var value = current[1];
+    previous[key] = value;
+    return previous;
    },
-   {}
+   {}// an empty object literal
   );
   var str = dictionary.str+"";
 
