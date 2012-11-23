@@ -49,6 +49,7 @@ function respond(request, response){
  //some requests are POST requests
  // any time you're submitting information that's supposed to change something, that's a POST
  //technically, the server in this example should not be using POST
+ // (cf. http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.5)
  // but in practical reality, there are limits to the lengths of GET parameters
  // and I wanted users to be able to post big .dot files and get big SVGs back out
  // so I had to compromise on theoretical purity :(
@@ -124,7 +125,7 @@ function handlePost(request, response){
  var data = [];
  request.on(
   "data",
-  function(chunk){
+  function bufferPostBody(chunk){
    //buffering is bad
    //but it's easier to write
    data.push(chunk);
@@ -132,12 +133,14 @@ function handlePost(request, response){
  );
  function afterRequest(){
   var postBody = data.join("");
-  var postParameters = postBody.split(";"); // I'll have to check the RFC
-  var alist = postParameters.map(
-   function decodePostParameter(str){
-    return str.split("=").map(decodeURIComponent);
-   }
-  );
+  // this function assumes the content type of the POST body is application/x-www-form-urlencoded
+  // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
+  // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
+  var postParameters = postBody.split(";");
+  function decodePostParameter(str){
+   return str.split("=").map(decodeURIComponent);
+  }
+  var alist = postParameters.map(decodePostParameter);
   var dictionary = alist.reduce(
    function fluentPatch(previous, current){
     var key = current[0];
