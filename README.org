@@ -29,8 +29,10 @@ JavaScript has [[http://c2.com/cgi/wiki?LexicalScoping][lexical scoping]].
 For now, we'll just create some variables at the file-level scope and not worry about what that means.
 : var http = require("http");
 Now you have a variable called http, and its value is an object.
-An object in JavaScript is (basically) just a dictionary.
+An object in JavaScript is (basically) just a [[http://c2.com/cgi/wiki?DictionaryDataStructure][dictionary]].
 That is, it maps string keys to values.
+By "it maps [these] to [those]", I mean it maintains an assosiation from one to the other,
+ so you can ask it a key and it will tell you the corresponding value.
 Key lookup can be done with either the dot notation or the bracket notation.
 For instance, the http object returned by that require statement has a property called "createServer".
 You can access this property as
