@@ -9,7 +9,7 @@ You will need [[http://www.graphviz.org][GraphViz]] for this to work.
 ** NodeJS
 serve.js is written in [[http://docs.webplatform.org/wiki/javascript][JavaScript]].
 Particularly, it is written in [[http://www.nodejs.org][Node]], a command-line [[http://code.google.com/p/v8/][V8]] with [[http://www.opengroup.org/austin/papers/posix_faq.html][POSIX]]-like libraries.
-Not familiar with Node or even JS at all? Good! This whole thing is for teaching.
+[[http://www.nodebeginner.org/][Not familiar]] with Node or even JS at all? Good! This whole thing is for teaching.
 The NodeJS [[http://nodejs.org/api/][documentation]] is good if you already know JS. Let's suppose you don't.
 *** CommonJS
 NodeJS includes a bunch of libraries.
@@ -126,3 +126,51 @@ This is because the path is part of the request object,
  based on anything in that object.
 Writing a webserver in NodeJS basically entails taking the line in the above example and changing the function in the middle.
 How that function transforms events emitted by the request parameter into events to emit on the response parameter is how your website behaves.
+
+*** Node and the JS event loop
+Why do we need to pass these callbacks around, anyway?
+Because the interpreter Node uses is single-threaded, as far as your JS is concerned.
+There's nothing like
+: var unsafeArray = [0, 1, 2];
+: var pid = fork();
+: if(pid) console.log(unsafeArray[1]);
+: else unsafeArray[1] = "race condition";
+in Node.
+You don't make threads and share global state while they preempt one another.
+Instead, there's one global event loop for the process.
+You can still get yourself in trouble, and now in two different ways,
+ but the most common problem with threaded code is no longer an issue.
+In a thread system like the POSIX pthreads library,
+ any thread can be paused at any time, and on any line of the compiled code.
+That means sometimes in the middle of a line of the source!
+One nice thing about that is it means that
+ one thread can run an infinite loop and the others still get to do things.
+But a big problem with it is that you can't know for sure that
+ the memory you're sharing doesn't get overwritten in the middle of your attempt to read it.
+Node is different. In Node (and probably in all JavaScript, but I'm not sure),
+ once the interpreter begins executing your function, there's no other thread that can step in and interrupt it.
+Your function has the floor, basically. When it returns, then other things get to run.
+Node provides a global variable for introspecting on the interpreter process.
+It's called "process" and is [[http://nodejs.org/api/process.html][documented]] in the API.
+process has a method called "nextTick", to which you can pass a callback.
+This is how you (and libraries other people have written) can interact with the event loop.
+Here's an example of how you might use process.nextTick(callback)
+: var counter = 0;
+: function doSomething(){
+:  counter++;
+:  console.log(counter);
+: }
+: console.log("one");
+: process.nextTick(doSomething);
+: console.log("two");
+: doSomething();
+: console.log("three");
+This program would print
+: one
+: two
+: 1
+: three
+: 2
+and then exit.
+It outputs the first four lines in one "tick" and then calls doSomething on the next tick.
+And doSomething takes counter, increments it, and outputs its new value.
