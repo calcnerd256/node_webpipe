@@ -145,20 +145,10 @@ function handlePost(request, response){
  var command = "dot";//this is what you would run at the command line
  var graphvizFlags = ["-Tsvg"];//see the graphviz manpage for details
  var kid = child_process.spawn(command, graphvizFlags);
- //data from the request doesn't come in all at once
- //we either need to stream it or buffer it
- //buffering is easier to write, but it has its drawbacks
- var data = [];
- request.on(
-  "data",
-  function bufferPostBody(chunk){
-   //buffering is bad
-   //but it's easier to write
-   data.push(chunk);
-  }
- );
- function afterRequest(){
-  var postBody = data.join("");
+
+ //the request is a readable stream, so it emits "data" events and a "done" event
+
+ function afterRequest(postBody){
   // this function assumes the content type of the POST body is application/x-www-form-urlencoded
   // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
   // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
@@ -183,7 +173,11 @@ function handlePost(request, response){
   kid.stdin.end();
  }
  //afterRequest processes the contents of the buffer collected from the "data" events
- request.on("end", afterRequest);
+
+ //we either need to stream the request or buffer it
+ //buffering is easier to write, but it has its drawbacks
+ bufferChunks(request, afterRequest);
+
  //redirect the standard output of the child process to the HTTP response body
  kid.stdout.on(
   "data",
@@ -192,4 +186,20 @@ function handlePost(request, response){
   }
  );
  kid.stdout.on("end", function(){response.end();});
+}
+
+function bufferChunks(stream, callback){
+ //data from the readable stream doesn't come in all at once
+
+ var buffer = [];
+ function collectChunk(chunk){
+  buffer.push(chunk);
+ }
+ function forwardBuffer(){
+  var result = buffer.join("");
+  return callback(result);
+ }
+ stream.on("data", collectChunk);
+ stream.on("end", forwardBuffer);
+ return stream;
 }
