@@ -1,3 +1,19 @@
+/*
+
+ structure
+  requires
+   http
+   child_process
+  configuration state
+   port
+   verbose
+  initialization
+  function definitions
+   afterServerSetup()
+   respond(request, response)
+   handleGet(request, response)
+   handlePost(request, response)
+*/
 
 //http library documented at http://nodejs.org/api/http.html
 var http = require("http");
