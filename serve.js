@@ -2,7 +2,12 @@
 //http library documented at http://nodejs.org/api/http.html
 var http = require("http");
 var child_process = require("child_process");
-var port = 15216; //typically 80
+
+var port = 8080; //typically 80
+var verbose = false;
+
+function init(){
+port = 15216;
 
 //the createServer function of the http library is a helper
 // it takes a function and returns an HTTP server
@@ -10,6 +15,10 @@ var port = 15216; //typically 80
 var server = http.createServer(respond);
 //now that I have a server, it needs to start listening for incoming connections
 server.listen(port,  afterServerSetup);
+ return server;
+}
+
+init();// this line kick-starts everything; the rest of the file is definitions
 //now that you have an HTTP server listening on a port, the program won't end
 //if you need to end the program, you can press Ctrl+C at the command line
 
@@ -22,7 +31,8 @@ function afterServerSetup(){
  //everything in NodeJS is asynchronous
  // so you have to pass continuations explicitly
 
- var noisy = false;
+ //the variable "verbose" comes from the top of this file
+ var noisy = verbose;
  //uncomment the following line if you want to see when it starts
  //noisy = true;
 
