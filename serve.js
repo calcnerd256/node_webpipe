@@ -192,14 +192,38 @@ function bufferChunks(stream, callback){
  //data from the readable stream doesn't come in all at once
 
  var buffer = [];
- function collectChunk(chunk){
-  buffer.push(chunk);
- }
  function forwardBuffer(){
   var result = buffer.join("");
   return callback(result);
  }
- stream.on("data", collectChunk);
+ //Array.prototype is the object that all instances of Array inherit from
+ //inheritance in JS is prototypical, which is kind of like patching
+ //so Array.prototype.push is the function that all arrays use for stack-like push behavior
+ //Array.prototype also has such methods as pop and shift and unshift for deque access
+ //so Array.prototype.push is a function
+ //it appends its argument to the end of whatever array it's called on
+ //by "called on", I mean someArray.push(someValue) sees someArray as "this"
+ //JavaScript has a "this" variable accessible in the body of every function
+ //there are some functions that override the "this" of a function
+ //Function.prototype.bind is such a function
+ //it takes the new "this" as its first parameter
+ //you can also optionally pass it additional parameters to pass to the function
+ //it is documented at https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind
+ //so here, Array.prototype.push is a function, so its bind method is equal to Function.prototype.bind
+ //calling Function.prototype.bind as Array.prototype.push.bind sets bind's "this" to Array.prototype.push within the call
+ //so bind tries to do something with its "this", and the thing bind does with its this is set the this of that this
+ // selah
+ //I want to push a chunk onto the end of an array
+ //stream.on("data", fn) will pass the chunk to fn as fn's only parameter
+ //so I want a function that will take a chunk as a parameter and call buffer.push with that chunk as the parameter
+ //to call buffer.push is to call the function that is value of buffer's "push" attribute, and to let "this" refer to buffer when doing so
+ //Function.prototype.bind lets me set the "this" of a function
+ //so, putting it all together, Array.prototype.push.bind(buffer) returns a function that forwards its arguments to the "push" method that instances of Array have by default, and it uses buffer as its "this" variable
+ stream.on("data", Array.prototype.push.bind(buffer));
+ //the above line is equivalent to stream.on("data", function(){[].push.apply(buffer, arguments)});
+ //in this case, that's equivalent to stream.on("data", function(chunk){buffer.push(chunk);})
+ // which is much easier to explain than all that bind() stuff, but "this" is an important concept
+
  stream.on("end", forwardBuffer);
  return stream;
 }
