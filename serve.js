@@ -7,14 +7,14 @@ var port = 8080; //typically 80
 var verbose = false;
 
 function init(){
-port = 15216;
+ port = 15216;
 
-//the createServer function of the http library is a helper
-// it takes a function and returns an HTTP server
-// that callback function gets bound to the request event
-var server = http.createServer(respond);
-//now that I have a server, it needs to start listening for incoming connections
-server.listen(port,  afterServerSetup);
+ //the createServer function of the http library is a helper
+ // it takes a function and returns an HTTP server
+ // that callback function gets bound to the request event
+ var server = http.createServer(respond);
+ //now that I have a server, it needs to start listening for incoming connections
+ server.listen(port,  afterServerSetup);
  return server;
 }
 
