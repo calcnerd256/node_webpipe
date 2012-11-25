@@ -188,14 +188,20 @@ function handlePost(request, response){
  kid.stdout.on("end", function(){response.end();});
 }
 
+function compose(f, g){
+ //like mathematical function composition
+ // compose(f, g)(x) = f(g(x))
+ return function(){
+  var intermediate = g.apply(this, arguments);
+  return f(intermediate);
+ }
+}
+
 function bufferChunks(stream, callback){
  //data from the readable stream doesn't come in all at once
 
  var buffer = [];
- function forwardBuffer(){
-  var result = buffer.join("");
-  return callback(result);
- }
+
  //Array.prototype is the object that all instances of Array inherit from
  //inheritance in JS is prototypical, which is kind of like patching
  //so Array.prototype.push is the function that all arrays use for stack-like push behavior
@@ -224,6 +230,15 @@ function bufferChunks(stream, callback){
  //in this case, that's equivalent to stream.on("data", function(chunk){buffer.push(chunk);})
  // which is much easier to explain than all that bind() stuff, but "this" is an important concept
 
- stream.on("end", forwardBuffer);
+ //okay, this one is also kind of hard to read
+ //it basically says that when stream emits "end", we pass the result of buffer.join("") to callback
+ //it takes advantage of Function.prototype.bind as above, but it uses it to pass it a "partial" argument list
+ // (although, in this case, since the "end" event doesn't pass any arguments, it's actually complete, so the bind becomes a thunk)
+ // a thunk is a nullary procedure, or one with zero arguments
+ // I think it comes from thunk as in think, but I also like to imagine it like it gets struck and, with a "thwack"ing sound, the delayed action falls out (and maybe plops on the ground)
+ //anyway, [].join.bind(buffer, "") is a thunk equal (for our purposes) to function(){return buffer.join("");}
+ //composing that thunk with callback is like mathematical function composition: it passes the result of the inner function to the outer one
+ // this has the effect of calling our continuation for us when the stream closes, and it passes our accumulated buffer to the next step
+ stream.on("end", compose(callback, Array.prototype.join.bind(buffer, "")));
  return stream;
 }
