@@ -255,4 +255,81 @@ function bufferChunks(stream, callback){
  // this has the effect of calling our continuation for us when the stream closes, and it passes our accumulated buffer to the next step
  stream.on("end", compose(callback, Array.prototype.join.bind(buffer, "")));
  return stream;
+
+ //this whole function body could be written as
+ return (
+  function(buffer){
+   return stream.on(
+    "data",
+    [].push.bind(buffer)
+   ).on(
+    "end",
+    [].join.bind(buffer, "")
+   );
+  }
+ )([]);
+
+ //or even as
+ return (
+  function(dictionaryListen, buffer){
+   return dictionaryListen(
+    stream,
+    {
+     "data": [].push.bind(buffer),
+     "end": [].join.bind(buffer, "")
+    }
+   );
+  }
+ )(
+  function dictionaryListen(emitter, listeners){
+   for(var channel in listeners)
+    emitter.on(channel, listeners[channel]);
+   return emitter;
+  },
+  []
+ );
+ //and dictionaryListen could be written as
+ (
+  function(emitter, listeners){
+   var alist = (
+    function dictionaryToAttributeList(dictionary){
+     return Object.keys(dictionary).map(
+      function(k){
+       return [k, dictionary[k]];
+      }
+     )
+    }
+   )(listeners);
+   return alist.reduce(
+    function(em, kv){
+     return em.on(kv[0], kv[1]);
+    },
+    emitter
+   );
+  }
+ )
+ //but even that can be written more tersely as
+ (
+  function(emitter, listeners){
+   return Object.keys(listeners).map(
+    function(k){
+     return [k, listeners[k]];
+    }
+   ).reduce(
+    (function(){}).apply.bind(emitter.on),
+    emitter
+   );
+  }
+ )
+ //though, if you already had dictionaryToAttributeList defined, then
+ (
+  function(emitter, listeners){
+   return dictionaryToAttributeList(listeners).reduce(
+    (function(){}).apply.bind(emitter.on),
+    emitter
+   );
+  }
+ )
+ //would be the shortest implementation of dictionaryListen I can think of offhand
+ //or at least the shortest one that meets my criteria for macho elegance
 }
