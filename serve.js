@@ -142,6 +142,10 @@ function handleGet(request, response){
 }
 
 function fluentPatch(key, value){
+ //must be called on an object or function (not a primitive)
+ //returns the dictionary upon which it was called (hence "fluent")
+ //can be used as fluentPatch.call(function(){}, "patch", fluentPatch).patch("someAttribute", someValue).patch("someMethod", someFunction).patch("anotherAttribute", anotherValue).someMethod(someArgument, anotherArgument);
+ //that's a kind of contrived example, but it shows off how this works
  this[key] = value;
  return this;
 }
