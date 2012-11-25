@@ -81,6 +81,155 @@ function applyFrom(that, methodName, args){
  return that[methodName].apply(that, args);
 }
 
+function compose(f, g){
+ //like mathematical function composition
+ // compose(f, g)(x) = f(g(x))
+ function composition(){
+  var intermediate = g.apply(this, arguments);
+  return f(intermediate);
+ }
+ //I hate un-debuggable closures
+ //if I handed you a function like the above, without the lines below, you wouldn't be able to do anything but call it
+ //it's nice to be able to crack it open and look at things like the f and g variables
+ //but they're only defined in this scope, so you can't ask about them outside of this scope, even if you have a function that uses them
+ //that function gets their scope, but having that function doesn't let you read its scope
+ //so I like to do the following
+ composition.f = f;
+ composition.g = g;
+ //that way for some f, compose(f, g).f === f
+ // and for some g, compose(f, g).g === g
+ //which can make debugging easier, especially if you have lots of functions that all came from calls to compose
+ return composition;
+}
+
+function bufferChunks(stream, callback){
+ //data from the readable stream doesn't come in all at once
+
+ var buffer = [];
+
+ //Array.prototype is the object that all instances of Array inherit from
+ //inheritance in JS is prototypical, which is kind of like patching
+ //so Array.prototype.push is the function that all arrays use for stack-like push behavior
+ //Array.prototype also has such methods as pop and shift and unshift for deque access
+ //so Array.prototype.push is a function
+ //it appends its argument to the end of whatever array it's called on
+ //by "called on", I mean someArray.push(someValue) sees someArray as "this"
+ //JavaScript has a "this" variable accessible in the body of every function
+ //there are some functions that override the "this" of a function
+ //Function.prototype.bind is such a function
+ //it takes the new "this" as its first parameter
+ //you can also optionally pass it additional parameters to pass to the function
+ //it is documented at https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind
+ //so here, Array.prototype.push is a function, so its bind method is equal to Function.prototype.bind
+ //calling Function.prototype.bind as Array.prototype.push.bind sets bind's "this" to Array.prototype.push within the call
+ //so bind tries to do something with its "this", and the thing bind does with its this is set the this of that this
+ // selah
+ //I want to push a chunk onto the end of an array
+ //stream.on("data", fn) will pass the chunk to fn as fn's only parameter
+ //so I want a function that will take a chunk as a parameter and call buffer.push with that chunk as the parameter
+ //to call buffer.push is to call the function that is value of buffer's "push" attribute, and to let "this" refer to buffer when doing so
+ //Function.prototype.bind lets me set the "this" of a function
+ //so, putting it all together, Array.prototype.push.bind(buffer) returns a function that forwards its arguments to the "push" method that instances of Array have by default, and it uses buffer as its "this" variable
+ stream.on("data", Array.prototype.push.bind(buffer));
+ //the above line is equivalent to stream.on("data", function(){[].push.apply(buffer, arguments)});
+ //in this case, that's equivalent to stream.on("data", function(chunk){buffer.push(chunk);})
+ // which is much easier to explain than all that bind() stuff, but "this" is an important concept
+
+ //okay, this one is also kind of hard to read
+ //it basically says that when stream emits "end", we pass the result of buffer.join("") to callback
+ //it takes advantage of Function.prototype.bind as above, but it uses it to pass it a "partial" argument list
+ // (although, in this case, since the "end" event doesn't pass any arguments, it's actually complete, so the bind becomes a thunk)
+ // a thunk is a nullary procedure, or one with zero arguments
+ // I think it comes from thunk as in think, but I also like to imagine it like it gets struck and, with a "thwack"ing sound, the delayed action falls out (and maybe plops on the ground)
+ //anyway, [].join.bind(buffer, "") is a thunk equal (for our purposes) to function(){return buffer.join("");}
+ //composing that thunk with callback is like mathematical function composition: it passes the result of the inner function to the outer one
+ // this has the effect of calling our continuation for us when the stream closes, and it passes our accumulated buffer to the next step
+ stream.on("end", compose(callback, Array.prototype.join.bind(buffer, "")));
+ return stream;
+
+ //stop reading after the above line, because nothing else in this function actually happens
+
+
+ //this whole function body could be written as
+ return (
+  function(buffer){
+   return stream.on(
+    "data",
+    [].push.bind(buffer)
+   ).on(
+    "end",
+    [].join.bind(buffer, "")
+   );
+  }
+ )([]);
+
+ //or even as
+ return (
+  function(dictionaryListen, buffer){
+   return dictionaryListen(
+    stream,
+    {
+     "data": [].push.bind(buffer),
+     "end": [].join.bind(buffer, "")
+    }
+   );
+  }
+ )(
+  function dictionaryListen(emitter, listeners){
+   for(var channel in listeners)
+    emitter.on(channel, listeners[channel]);
+   return emitter;
+  },
+  []
+ );
+ //and dictionaryListen could be written as
+ (
+  function(emitter, listeners){
+   var alist = (
+    function dictionaryToAttributeList(dictionary){
+     return Object.keys(dictionary).map(
+      function(k){
+       return [k, dictionary[k]];
+      }
+     )
+    }
+   )(listeners);
+   return alist.reduce(
+    function(em, kv){
+     return em.on(kv[0], kv[1]);
+    },
+    emitter
+   );
+  }
+ )
+ //but even that can be written more tersely as
+ (
+  function(emitter, listeners){
+   return Object.keys(listeners).map(
+    function(k){
+     return [k, listeners[k]];
+    }
+   ).reduce(
+    (function(){}).apply.bind(emitter.on),
+    emitter
+   );
+  }
+ )
+ //though, if you already had dictionaryToAttributeList defined, then
+ (
+  function(emitter, listeners){
+   return dictionaryToAttributeList(listeners).reduce(
+    (function(){}).apply.bind(emitter.on),
+    emitter
+   );
+  }
+ )
+ //would be the shortest implementation of dictionaryListen I can think of offhand
+ //or at least the shortest one that meets my criteria for macho elegance
+}
+
 this.EventSponge = EventSponge;
 this.SingleCharacterDelimiterLexerEmitter = SingleCharacterDelimiterLexerEmitter;
 this.applyFrom = applyFrom;
+this.compose = compose;
+this.bufferChunks = bufferChunks;
