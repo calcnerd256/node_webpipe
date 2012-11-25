@@ -189,14 +189,28 @@ function handlePost(request, response){
 
  //the request is a readable stream, so it emits "data" events and a "done" event
 
- function afterRequest(postBody){
-  // this function assumes the content type of the POST body is application/x-www-form-urlencoded
-  var dictionary = parseUrlencodedForm(postBody);
-  var str = dictionary.str+"";
+ function afterParse(form){
+  //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
+  // we just want to take the "src" out of the parsed POST body
+  // and we want to pass that to our child process through standard input
+  // the child process then writes its standard output, which we forward to the HTTP response
+
+  //using concatenation to force coercion is kind of tacky
+  //but it was shorter than doing all the necessary checks to ensure that dictionary.str existed and was a string or had a .toString() method
+  //if we pass something to stdin.write that isn't a string or buffer, it would throw an exception
+  //and if we don't catch that exception, it'll bring the whole server down
+  //so it's easiest to just make sure that str is always a string, no matter what the user sent us in the POST request body
+  var str = form.str + "";
 
   //send the whole thing along to the child process
   kid.stdin.write(str);
   kid.stdin.end();
+ }
+
+ function afterRequest(postBody){
+  // this function assumes the content type of the POST body is application/x-www-form-urlencoded
+  var dictionary = parseUrlencodedForm(postBody);
+  afterParse(dictionary);
  }
  //afterRequest processes the contents of the buffer collected from the "data" events
 
