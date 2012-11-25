@@ -256,6 +256,9 @@ function bufferChunks(stream, callback){
  stream.on("end", compose(callback, Array.prototype.join.bind(buffer, "")));
  return stream;
 
+ //stop reading after the above line, because nothing else in this function actually happens
+
+
  //this whole function body could be written as
  return (
   function(buffer){
