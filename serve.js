@@ -189,84 +189,10 @@ function handlePost(request, response){
 
  //the request is a readable stream, so it emits "data" events and a "done" event
 
- function applyFrom(that, methodName, args){
-  return that[methodName].apply(that, args);
- }
+ var streamHelpers = require("./streams.js");
+ var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
 
  //here's some experiment that will become a better streaming implementation of what was buffered before
- var EventEmitter = require("events").EventEmitter;
- function EventSponge(noBuffer){
-  if(!noBuffer) this.pause();
-  this.emitter = new EventEmitter();
- }
- EventSponge.prototype.emit = function emit(){
-  if(!this.buffer)
-   return applyFrom(this.emitter, "emit", arguments);
-  this.buffer.push(arguments);
-  return this;
- };
- EventSponge.prototype.on = function on(){
-  return applyFrom(this.emitter, "on", arguments);
- };
- EventSponge.prototype.pause = function pause(){
-  if(!this.buffer) this.buffer = [];
-  return this;
- };
- EventSponge.prototype.resume = function resume(){
-  if(!this.buffer) return;
-  this.buffer.map(
-   Function.prototype.apply.bind(
-    this.emitter.emit,
-    this.emitter
-   )
-  );
-  delete this.buffer;
-  return this;
- };
-
- function SingleCharacterDelimiterLexerEmitter(stream, delimiter){
-  this.delimiter = delimiter;
-  this.emitter = new EventSponge();
-  stream.on(
-   "data",
-   this.handleChunk.bind(this)
-  ).on(
-   "end",
-   function(){
-    this.delimit();
-    this.emitter.emit("end");
-   }.bind(this)
-  );
-  this.delimit();
- }
- SingleCharacterDelimiterLexerEmitter.prototype.delimit = function delimit(){
-  if(this.buffer)
-   this.buffer.emit.bind(this.buffer, "end").apply(this.buffer, arguments);
-  this.emitter.emit("lexer", this.buffer = new EventSponge());
- };
- SingleCharacterDelimiterLexerEmitter.prototype.handleChunk = function handleChunk(chunk){
-  if(chunk.toString().indexOf(this.delimiter) == -1)
-   return this.buffer.emit("data", chunk);
-  var tokens = chunk.toString().split(this.delimiter);//not binary-safe
-  var remaining = tokens.pop();
-  remaining.map(
-   function(token){
-    this.buffer.emit("data", token);
-    this.delimit();
-   }
-  );
-  this.buffer.emit("data", remaining);
- };
- SingleCharacterDelimiterLexerEmitter.prototype.on = function on(){
-  this.emitter.on.apply(this.emitter, arguments);
-  return this;
- };
- SingleCharacterDelimiterLexerEmitter.prototype.pause = function pause(){
-  return applyFrom(this.emitter, "pause", arguments);
- };
- SingleCharacterDelimiterLexerEmitter.prototype.resume = function resume(){
-  return applyFrom(this.emitter, "resume", arguments);
- };
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
@@ -284,29 +210,6 @@ function handlePost(request, response){
    lexer.resume();
   }
  ).on("end", console.log.bind(console, "request end")).resume();
-/* var formEmitter = {
-  state: {
-  },
-  handleChunk: function(chunk){
-  },
-  end: function(){
-  },
-  emitter: new EventEmitter()//emits emitters that emit "data" and "end"
- };
- formEmitter.emitter.on(
-  "str",
-  function(strEmitter){
-   strEmitter.on("data", function(chunk){console.log("chunk: " + chunk)});
-  }
- );
- request.on(
-  "data",
-  function(chunk){
-   formEmitter.handleChunk(chunk);
-  }
- )
- request.on("end", formEmitter.end.bind(formEmitter));
-*/
  function afterParse(form){
   //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
   // we just want to take the "src" out of the parsed POST body
