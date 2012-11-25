@@ -141,6 +141,10 @@ function handleGet(request, response){
  response.end();
 }
 
+function fluentPatch(key, value){
+ this[key] = value;
+ return this;
+}
 function parseUrlencodedForm(body){
  // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
  // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
@@ -154,16 +158,21 @@ function parseUrlencodedForm(body){
  //so the "alist" variable is a list of lists,
  // and the inner lists are each of length two
  var alist = parameters.map(decodeParameter);
- var dictionary = alist.reduce(
-  function fluentPatch(previous, current){
-   var key = current[0];
-   var value = current[1];
-   previous[key] = value;
-   return previous;
-  },
-  {}// an empty object literal
- );
- return dictionary;
+ var result = {};
+ // the following comments are all different ways to do what the line after them does
+ /*
+ for(var i = 0; i < alist.length; i++){
+  var keyValuePair = alist[i];
+  var key = keyValuePair[0];
+  var value = keyValuePair[1];
+  result[key] = value;
+ }
+ */
+ //alist.map(function(kv){result[kv[0]] = kv[1];});
+ //alist.map(function(angs){fluentPatch.call(result, args[0], args[1]);});
+ //alist.map(function(args){fluentPatch.apply(result, args);});
+ alist.map(Function.prototype.apply.bind(fluentPatch, result));
+ return result;
 }
 
 function handlePost(request, response){
