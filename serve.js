@@ -13,6 +13,8 @@
    respond(request, response)
    handleGet(request, response)
    handlePost(request, response)
+   compose(f, g)
+   bufferChunks(stream)
 */
 
 //http library documented at http://nodejs.org/api/http.html
