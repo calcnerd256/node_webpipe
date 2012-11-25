@@ -189,35 +189,101 @@ function handlePost(request, response){
 
  //the request is a readable stream, so it emits "data" events and a "done" event
 
+ function applyFrom(that, methodName, args){
+  return that[methodName].apply(that, args);
+ }
+
  //here's some experiment that will become a better streaming implementation of what was buffered before
  var EventEmitter = require("events").EventEmitter;
- function SingleCharacterDelimiterLexerEmitter(stream, delimiter){
-  this.buffer = [];
-  this.delimiter = delimiter;
+ function EventSponge(noBuffer){
+  if(!noBuffer) this.pause();
   this.emitter = new EventEmitter();
+ }
+ EventSponge.prototype.emit = function emit(){
+  if(!this.buffer)
+   return applyFrom(this.emitter, "emit", arguments);
+  this.buffer.push(arguments);
+  return this;
+ };
+ EventSponge.prototype.on = function on(){
+  return applyFrom(this.emitter, "on", arguments);
+ };
+ EventSponge.prototype.pause = function pause(){
+  if(!this.buffer) this.buffer = [];
+  return this;
+ };
+ EventSponge.prototype.resume = function resume(){
+  if(!this.buffer) return;
+  this.buffer.map(
+   Function.prototype.apply.bind(
+    this.emitter.emit,
+    this.emitter
+   )
+  );
+  delete this.buffer;
+  return this;
+ };
+
+ function SingleCharacterDelimiterLexerEmitter(stream, delimiter){
+  this.delimiter = delimiter;
+  this.emitter = new EventSponge();
   stream.on(
    "data",
    this.handleChunk.bind(this)
   ).on(
    "end",
    function(){
-    this.emitter.emit("data", this.buffer.join(""));
-    this.emitter.emit.bind(this.emitter, "end").apply(this, arguments);
+    this.delimit();
+    this.emitter.emit("end");
    }.bind(this)
   );
+  this.delimit();
  }
+ SingleCharacterDelimiterLexerEmitter.prototype.delimit = function delimit(){
+  if(this.buffer)
+   this.buffer.emit.bind(this.buffer, "end").apply(this.buffer, arguments);
+  this.emitter.emit("lexer", this.buffer = new EventSponge());
+ };
  SingleCharacterDelimiterLexerEmitter.prototype.handleChunk = function handleChunk(chunk){
   if(chunk.toString().indexOf(this.delimiter) == -1)
-   return this.buffer.push(chunk);
+   return this.buffer.emit("data", chunk);
   var tokens = chunk.toString().split(this.delimiter);//not binary-safe
   var remaining = tokens.pop();
-  this.buffer = [remaining];
-  remaining.map(this.emitter.emit.bind(this.emitter, "data"));
- }
+  remaining.map(
+   function(token){
+    this.buffer.emit("data", token);
+    this.delimit();
+   }
+  );
+  this.buffer.emit("data", remaining);
+ };
  SingleCharacterDelimiterLexerEmitter.prototype.on = function on(){
-  return this.emitter.on.apply(this.emitter, arguments);
- }
- new SingleCharacterDelimiterLexerEmitter(request, "&").on("data", console.log.bind(console));
+  this.emitter.on.apply(this.emitter, arguments);
+  return this;
+ };
+ SingleCharacterDelimiterLexerEmitter.prototype.pause = function pause(){
+  return applyFrom(this.emitter, "pause", arguments);
+ };
+ SingleCharacterDelimiterLexerEmitter.prototype.resume = function resume(){
+  return applyFrom(this.emitter, "resume", arguments);
+ };
+ new SingleCharacterDelimiterLexerEmitter(request, "&").on(
+  "lexer",
+  function(lexer){
+   console.log("new lexer " + JSON.stringify(lexer));
+   lexer.on(
+    "data",
+    compose(
+     console.log.bind(console),
+     function(str){return str+"";}
+    )
+   ).on(
+    "end",
+    console.log.bind(console, "lexer end")
+   );
+   lexer.resume();
+  }
+ ).on("end", console.log.bind(console, "request end")).resume();
 /* var formEmitter = {
   state: {
   },
