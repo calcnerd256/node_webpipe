@@ -154,7 +154,7 @@ function handlePost(request, response){
   // this function assumes the content type of the POST body is application/x-www-form-urlencoded
   // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
   // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
-  var postParameters = postBody.split(";");
+  var postParameters = postBody.split("&");
   function decodePostParameter(str){
    return str.split("=").map(decodeURIComponent);
   }
