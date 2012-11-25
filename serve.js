@@ -193,10 +193,22 @@ function handlePost(request, response){
 function compose(f, g){
  //like mathematical function composition
  // compose(f, g)(x) = f(g(x))
- return function(){
+ function composition(){
   var intermediate = g.apply(this, arguments);
   return f(intermediate);
  }
+ //I hate un-debuggable closures
+ //if I handed you a function like the above, without the lines below, you wouldn't be able to do anything but call it
+ //it's nice to be able to crack it open and look at things like the f and g variables
+ //but they're only defined in this scope, so you can't ask about them outside of this scope, even if you have a function that uses them
+ //that function gets their scope, but having that function doesn't let you read its scope
+ //so I like to do the following
+ composition.f = f;
+ composition.g = g;
+ //that way for some f, compose(f, g).f === f
+ // and for some g, compose(f, g).g === g
+ //which can make debugging easier, especially if you have lots of functions that all came from calls to compose
+ return composition;
 }
 
 function bufferChunks(stream, callback){
