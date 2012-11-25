@@ -4,6 +4,7 @@
   requires
    http
    child_process
+   ./streams
   configuration state
    port
    verbose
@@ -22,6 +23,7 @@
 //http library documented at http://nodejs.org/api/http.html
 var http = require("http");
 var child_process = require("child_process");
+var streamHelpers = require("./streams");
 
 var port = 8080; //typically 80
 var verbose = false;
@@ -151,13 +153,14 @@ function fluentPatch(key, value){
  this[key] = value;
  return this;
 }
+function decodeUrlencodedParameter(str){
+ return str.split("=").map(decodeURIComponent);
+}
 function parseUrlencodedForm(body){
  // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
  // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
  var parameters = body.split("&");
- function decodeParameter(str){
-  return str.split("=").map(decodeURIComponent);
- }
+ var decodeParameter = decodeUrlencodedParameter;
  //an "alist" (attribute list) in Lisp is a list of pairs,
  // where each pair is <key, value>
  //here, instead of pairs, I'm using lists of length two
@@ -189,27 +192,24 @@ function handlePost(request, response){
 
  //the request is a readable stream, so it emits "data" events and a "done" event
 
- var streamHelpers = require("./streams.js");
+
  var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
 
  //here's some experiment that will become a better streaming implementation of what was buffered before
+ var form = {};
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
-   console.log("new lexer " + JSON.stringify(lexer));
-   lexer.on(
-    "data",
-    compose(
-     console.log.bind(console),
-     function(str){return str+"";}
-    )
-   ).on(
-    "end",
-    console.log.bind(console, "lexer end")
+   bufferChunks(
+    lexer,
+    compose(Function.prototype.apply.bind(fluentPatch,form), decodeUrlencodedParameter)
    );
    lexer.resume();
   }
- ).on("end", console.log.bind(console, "request end")).resume();
+ ).on(
+  "end",
+  afterParse.bind(this, form)
+ ).resume();//the resume is necessary because it starts paused to avoid a race condition
  function afterParse(form){
   //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
   // we just want to take the "src" out of the parsed POST body
@@ -237,7 +237,7 @@ function handlePost(request, response){
 
  //we either need to stream the request or buffer it
  //buffering is easier to write, but it has its drawbacks
- bufferChunks(request, afterRequest);
+ //bufferChunks(request, afterRequest);
 
  //redirect the standard output of the child process to the HTTP response body
  kid.stdout.on(
