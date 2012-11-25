@@ -12,6 +12,8 @@
    afterServerSetup()
    respond(request, response)
    handleGet(request, response)
+   fluentPatch(key, value)
+   parseUrlencodedForm(body)
    handlePost(request, response)
    compose(f, g)
    bufferChunks(stream)
