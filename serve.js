@@ -189,6 +189,58 @@ function handlePost(request, response){
 
  //the request is a readable stream, so it emits "data" events and a "done" event
 
+ //here's some experiment that will become a better streaming implementation of what was buffered before
+ var EventEmitter = require("events").EventEmitter;
+ function SingleCharacterDelimiterLexerEmitter(stream, delimiter){
+  this.buffer = [];
+  this.delimiter = delimiter;
+  this.emitter = new EventEmitter();
+  stream.on(
+   "data",
+   this.handleChunk.bind(this)
+  ).on(
+   "end",
+   function(){
+    this.emitter.emit("data", this.buffer.join(""));
+    this.emitter.emit.bind(this.emitter, "end").apply(this, arguments);
+   }.bind(this)
+  );
+ }
+ SingleCharacterDelimiterLexerEmitter.prototype.handleChunk = function handleChunk(chunk){
+  if(chunk.toString().indexOf(this.delimiter) == -1)
+   return this.buffer.push(chunk);
+  var tokens = chunk.toString().split(this.delimiter);//not binary-safe
+  var remaining = tokens.pop();
+  this.buffer = [remaining];
+  remaining.map(this.emitter.emit.bind(this.emitter, "data"));
+ }
+ SingleCharacterDelimiterLexerEmitter.prototype.on = function on(){
+  return this.emitter.on.apply(this.emitter, arguments);
+ }
+ new SingleCharacterDelimiterLexerEmitter(request, "&").on("data", console.log.bind(console));
+/* var formEmitter = {
+  state: {
+  },
+  handleChunk: function(chunk){
+  },
+  end: function(){
+  },
+  emitter: new EventEmitter()//emits emitters that emit "data" and "end"
+ };
+ formEmitter.emitter.on(
+  "str",
+  function(strEmitter){
+   strEmitter.on("data", function(chunk){console.log("chunk: " + chunk)});
+  }
+ );
+ request.on(
+  "data",
+  function(chunk){
+   formEmitter.handleChunk(chunk);
+  }
+ )
+ request.on("end", formEmitter.end.bind(formEmitter));
+*/
  function afterParse(form){
   //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
   // we just want to take the "src" out of the parsed POST body
