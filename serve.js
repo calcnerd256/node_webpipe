@@ -4,6 +4,8 @@
   requires
    http
    child_process
+   events
+    EventEmitter
    ./streams
     compose(f, g)
     bufferChunks(stream, callback)
@@ -23,7 +25,11 @@
 //http library documented at http://nodejs.org/api/http.html
 var http = require("http");
 var child_process = require("child_process");
+var events = require("events");
+ var EventEmitter = events.EventEmitter;
 var streamHelpers = require("./streams");
+ var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
+ var EventSponge = streamHelpers.EventSponge;
  var bufferChunks = streamHelpers.bufferChunks;
  var compose = streamHelpers.compose;
 
@@ -124,10 +130,10 @@ function handleGet(request, response){
   " <body>",
   "  <form method=\"POST\">",
   "   <textarea name=\"str\">",
-  "digraph{",
-   "a->b;",
-  "}",
-  "   </textarea>",
+      "digraph{",
+      " a->b;",
+      "}",
+     "</textarea>",
   "   <input type=\"submit\"></input>",
   "  </form>",
   " </body>",
@@ -156,7 +162,8 @@ function fluentPatch(key, value){
  return this;
 }
 function decodeUrlencodedParameter(str){
- return str.split("=").map(decodeURIComponent);
+ // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
+ return str.replace("+", " ").split("=").map(decodeURIComponent);
 }
 function parseUrlencodedForm(body){
  // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
@@ -195,26 +202,44 @@ function handlePost(request, response){
  //the request is a readable stream, so it emits "data" events and a "done" event
 
 
- var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
-
  //here's some experiment that will become a better streaming implementation of what was buffered before
 
  // this function assumes the content type of the POST body is application/x-www-form-urlencoded
  var form = {};
+ var formEmitter = new EventEmitter();
+ var formStreamEmitter = new EventEmitter();
+ var i = kid.stdin;
+ formStreamEmitter.on(
+  "str",
+  function(stream){
+   stream.on("data", i.write.bind(i)).on("end", i.end.bind(i)).resume();
+  }
+ );
+ formEmitter.on(
+  "str",
+  function(str){
+   var emitter = new EventSponge();
+   formStreamEmitter.emit("str", emitter);
+   emitter.emit("data", str);
+   emitter.emit("end");
+  }
+ );
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
    bufferChunks(
     lexer,
-    compose(Function.prototype.apply.bind(fluentPatch,form), decodeUrlencodedParameter)
+    function(param){
+     var pair = decodeUrlencodedParameter(param);
+     var key = pair[0];
+     var value = pair[1];
+     form[key] = value;
+     formEmitter.emit(key, value);
+    }
    );
    lexer.resume();
   }
- ).on(
-  "end",
-  afterParse.bind(this, form)
  ).resume();//the resume is necessary because it starts paused to avoid a race condition
- function afterParse(form){
   //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
   // we just want to take the "src" out of the parsed POST body
   // and we want to pass that to our child process through standard input
@@ -225,12 +250,9 @@ function handlePost(request, response){
   //if we pass something to stdin.write that isn't a string or buffer, it would throw an exception
   //and if we don't catch that exception, it'll bring the whole server down
   //so it's easiest to just make sure that str is always a string, no matter what the user sent us in the POST request body
-  var str = form.str + "";
 
   //send the whole thing along to the child process
-  kid.stdin.write(str);
-  kid.stdin.end();
- }
+
 
  //redirect the standard output of the child process to the HTTP response body
  kid.stdout.on(

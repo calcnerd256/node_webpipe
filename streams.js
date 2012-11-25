@@ -11,7 +11,8 @@ EventSponge.prototype.emit = function emit(){
  return this;
 };
 EventSponge.prototype.on = function on(){
- return applyFrom(this.emitter, "on", arguments);
+ applyFrom(this.emitter, "on", arguments);
+ return this;
 };
 EventSponge.prototype.pause = function pause(){
  if(!this.buffer) this.buffer = [];
@@ -66,9 +67,13 @@ SingleCharacterDelimiterLexerEmitter.prototype.handleChunk = function handleChun
  this.buffer.emit("data", remaining);
 };
 SingleCharacterDelimiterLexerEmitter.prototype.on = function on(){
- this.emitter.on.apply(this.emitter, arguments);
+ applyFrom(this.emitter, "on", arguments);
  return this;
 };
+SingleCharacterDelimiterLexerEmitter.prototype.once = function once(){
+ applyFrom(this.emitter, "once", arguments);
+ return this;
+}
 SingleCharacterDelimiterLexerEmitter.prototype.pause = function pause(){
  return applyFrom(this.emitter, "pause", arguments);
 };
