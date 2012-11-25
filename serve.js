@@ -141,6 +141,30 @@ function handleGet(request, response){
  response.end();
 }
 
+function parseUrlencodedForm(body){
+ // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
+ // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
+ var parameters = body.split("&");
+ function decodeParameter(str){
+  return str.split("=").map(decodeURIComponent);
+ }
+ //an "alist" (attribute list) in Lisp is a list of pairs,
+ // where each pair is <key, value>
+ //here, instead of pairs, I'm using lists of length two
+ //so the "alist" variable is a list of lists,
+ // and the inner lists are each of length two
+ var alist = parameters.map(decodeParameter);
+ var dictionary = alist.reduce(
+  function fluentPatch(previous, current){
+   var key = current[0];
+   var value = current[1];
+   previous[key] = value;
+   return previous;
+  },
+  {}// an empty object literal
+ );
+ return dictionary;
+}
 
 function handlePost(request, response){
  response.writeHead(200, {"Content-type": "image/svg+xml"});
@@ -152,22 +176,7 @@ function handlePost(request, response){
 
  function afterRequest(postBody){
   // this function assumes the content type of the POST body is application/x-www-form-urlencoded
-  // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
-  // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
-  var postParameters = postBody.split("&");
-  function decodePostParameter(str){
-   return str.split("=").map(decodeURIComponent);
-  }
-  var alist = postParameters.map(decodePostParameter);
-  var dictionary = alist.reduce(
-   function fluentPatch(previous, current){
-    var key = current[0];
-    var value = current[1];
-    previous[key] = value;
-    return previous;
-   },
-   {}// an empty object literal
-  );
+  var dictionary = parseUrlencodedForm(postBody);
   var str = dictionary.str+"";
 
   //send the whole thing along to the child process
