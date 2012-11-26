@@ -201,7 +201,6 @@ function handlePost(request, response){
    bufferChunks(
     param.before.resume(),
     function(channel){
-     var stream = new SlicingStream(param.andAfter, 1);
      var buffer = "";
      var emitter = new EventSponge();
      var decoder = new EventEmitter();
@@ -231,7 +230,7 @@ function handlePost(request, response){
       }
      );
      //TODO simplify forwarding
-     stream.on("data", decoder.emit.bind(decoder, "data")).on("end", decoder.emit.bind(decoder, "end"));
+     new SlicingStream(param.andAfter, 1).on("data", decoder.emit.bind(decoder, "data")).on("end", decoder.emit.bind(decoder, "end"));
      param.andAfter.resume();
      formStreamEmitter.emit(channel, emitter);
     }
