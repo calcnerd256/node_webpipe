@@ -10,6 +10,7 @@
     EventSponge
     SingleCharacterSingleSplitter
     SingleCharacterDelimiterLexerEmitter
+    SlicingStream
     compose(f, g)
     bufferChunks(stream, callback)
   configuration state
@@ -32,8 +33,9 @@ var streamHelpers = require("./streams");
  var EventSponge = streamHelpers.EventSponge;
  var SingleCharacterSingleSplitter = streamHelpers.SingleCharacterSingleSplitter;
  var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
- var bufferChunks = streamHelpers.bufferChunks;
+ var SlicingStream = streamHelpers.SlicingStream;
  var compose = streamHelpers.compose;
+ var bufferChunks = streamHelpers.bufferChunks;
 
 var port = 8080; //typically 80
 var verbose = false;
@@ -199,7 +201,7 @@ function handlePost(request, response){
    bufferChunks(
     param.before.resume(),
     function(channel){
-     var stream = param.andAfter;
+     var stream = new SlicingStream(param.andAfter, 1);
      var buffer = "";
      var emitter = new EventSponge();
      var decoder = new EventEmitter();
@@ -228,14 +230,9 @@ function handlePost(request, response){
        emitter.emit("end");
       }
      );
-     //TODO use a SlicingStream here
-     stream.once(
-      "data",
-      function(chunk){
-       decoder.emit("data", chunk.slice(1));
-       stream.on("data", decoder.emit.bind(decoder, "data"));
-      }
-     ).on("end", decoder.emit.bind(decoder, "end")).resume();
+     //TODO simplify forwarding
+     stream.on("data", decoder.emit.bind(decoder, "data")).on("end", decoder.emit.bind(decoder, "end"));
+     param.andAfter.resume();
      formStreamEmitter.emit(channel, emitter);
     }
    );
