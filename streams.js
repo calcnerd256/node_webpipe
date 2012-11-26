@@ -263,9 +263,29 @@ function bufferChunks(stream, callback){
  //or at least the shortest one that meets my criteria for macho elegance
 }
 
+function SlicingStream(stream, offset){
+ //discard the first offset bytes of the stream
+ this.emitter = new EventEmitter();
+ this.remaining = offset;
+ stream.on("data", this.handleChunk.bind(this)).on("end", this.emitter.emit.bind(this.emitter, "end"));
+}
+SlicingStream.prototype.handleChunk = function(chunk){
+ var remaining = this.remaining;
+ this.remaining -= chunk.length;
+ if(remaining > chunk.length) return;
+ this.emitter.emit("data", chunk.slice(remaining));
+ this.remaining = 0;
+}
+SlicingStream.prototype.on = function on(){
+ this.emitter.on.apply(this.emitter, arguments);
+ return this;
+}
+
+
 this.EventSponge = EventSponge;
 this.SingleCharacterSingleSplitter = SingleCharacterSingleSplitter;
 this.SingleCharacterDelimiterLexerEmitter = SingleCharacterDelimiterLexerEmitter;
 this.applyFrom = applyFrom;
 this.compose = compose;
 this.bufferChunks = bufferChunks;
+this.SlicingStream = SlicingStream;

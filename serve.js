@@ -191,7 +191,6 @@ function handlePost(request, response){
  // a prefix will suffice, or I can use the name as an argument
  // I think I prefer the prefx, so I can filter on it with the native event logic
 
-
  // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
@@ -229,7 +228,7 @@ function handlePost(request, response){
        emitter.emit("end");
       }
      );
-     //TODO make a stream class that slices off the first n bytes
+     //TODO use a SlicingStream here
      stream.once(
       "data",
       function(chunk){
