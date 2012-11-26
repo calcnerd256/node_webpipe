@@ -12,6 +12,7 @@
     SingleCharacterDelimiterLexerEmitter
     SlicingStream
     FunctionImageStream
+    VaryingBufferStream
     compose(f, g)
     bufferChunks(stream, callback)
   configuration state
@@ -36,6 +37,7 @@ var streamHelpers = require("./streams");
  var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
  var SlicingStream = streamHelpers.SlicingStream;
  var FunctionImageStream = streamHelpers.FunctionImageStream;
+ var VaryingBufferStream = streamHelpers.VaryingBufferStream;
  var compose = streamHelpers.compose;
  var bufferChunks = streamHelpers.bufferChunks;
 
@@ -201,6 +203,13 @@ function handlePost(request, response){
    chunk.toString().replace("+", " ")
   );
  }
+ function chunkSliceLength(chunk, buffer){
+  var l = chunk.length;
+  if(2 > l) return 0;
+  if(0x25 == chunk[l - 2]) return l - 2;
+  if(0x25 == chunk[l - 1]) return l - 1;
+  return l;
+ }
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
@@ -218,37 +227,17 @@ function handlePost(request, response){
    bufferChunks(
     param.before.resume(),
     function(channel){
-     var buffer = "";
-     var stream = new EventEmitter();
-     var emitter = new FunctionImageStream(stream, decodeUriParameter);
-     var decoder = new EventEmitter();
-     function chunkSliceLength(chunk, buffer){
-      var l = chunk.length;
-      if(2 > l) return 0;
-      if(0x25 == chunk[l - 2]) return l - 2;
-      if(0x25 == chunk[l - 1]) return l - 1;
-      return l;
-     }
-     decoder.on(
-      "data",
-      function(chunk){
-       //TODO make a stream class that buffers based on an integer function of the chunk
-       var i = chunkSliceLength(chunk, buffer);
-       if(0 >= i) return buffer += chunk;
-       stream.emit("data", buffer + chunk.slice(0, i));
-       buffer = chunk.slice(i);
-      }
-     ).on(
-      "end",
-      function(){
-       if(buffer)
-        stream.emit("data", buffer);
-       stream.emit("end");
-      }
+     formStreamEmitter.emit(
+      channel,
+      new FunctionImageStream(
+       new VaryingBufferStream(
+        new SlicingStream(param.andAfter, 1),
+        chunkSliceLength
+       ),
+       decodeUriParameter
+      )
      );
-     pipeStream(new SlicingStream(param.andAfter, 1), decoder);
      param.andAfter.resume();
-     formStreamEmitter.emit(channel, emitter);
     }
    );
   }
