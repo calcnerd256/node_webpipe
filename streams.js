@@ -281,6 +281,23 @@ SlicingStream.prototype.on = function on(){
  return this;
 }
 
+function FunctionImageStream(stream, fn){
+ this.fn = fn;
+ this.emitter = new EventSponge();
+ stream.on("data", compose(this.emitter.emit.bind(this.emitter, "data"), this.fn)).on("end", this.emitter.emit.bind(this.emitter, "end"));
+}
+FunctionImageStream.prototype.on = function on(){
+ this.emitter.on.apply(this.emitter, arguments);
+ return this;
+}
+FunctionImageStream.prototype.pause = function pause(){
+ this.emitter.pause.apply(this.emitter, arguments);
+ return this;
+}
+FunctionImageStream.prototype.resume = function resume(){
+ this.emitter.resume.apply(this.emitter, arguments);
+ return this;
+}
 
 this.EventSponge = EventSponge;
 this.SingleCharacterSingleSplitter = SingleCharacterSingleSplitter;
@@ -289,3 +306,4 @@ this.applyFrom = applyFrom;
 this.compose = compose;
 this.bufferChunks = bufferChunks;
 this.SlicingStream = SlicingStream;
+this.FunctionImageStream = FunctionImageStream;

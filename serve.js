@@ -11,6 +11,7 @@
     SingleCharacterSingleSplitter
     SingleCharacterDelimiterLexerEmitter
     SlicingStream
+    FunctionImageStream
     compose(f, g)
     bufferChunks(stream, callback)
   configuration state
@@ -34,6 +35,7 @@ var streamHelpers = require("./streams");
  var SingleCharacterSingleSplitter = streamHelpers.SingleCharacterSingleSplitter;
  var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
  var SlicingStream = streamHelpers.SlicingStream;
+ var FunctionImageStream = streamHelpers.FunctionImageStream;
  var compose = streamHelpers.compose;
  var bufferChunks = streamHelpers.bufferChunks;
 
@@ -194,21 +196,31 @@ function handlePost(request, response){
  // I think I prefer the prefx, so I can filter on it with the native event logic
 
  // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
+ function decodeUriParameter(chunk){
+  return decodeURIComponent(
+   chunk.toString().replace("+", " ")
+  );
+ }
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
    param = new SingleCharacterSingleSplitter(lexer.resume(), "=");
+   function forwardChannel(source, channel, target){
+    return source.on(channel, target.emit.bind(target, channel));
+   }
+   function pipeStream(source, target){
+    return forwardChannel(
+     forwardChannel(source, "data", target),
+     "end",
+     target
+    );
+   }
    bufferChunks(
     param.before.resume(),
     function(channel){
      var buffer = "";
-     var emitter = new EventSponge();
-     var stream = new EventEmitter().on(
-      "data",
-      function(chunk){
-       return emitter.emit("data", decodeURIComponent(chunk.toString()).replace("+", " "));
-      }
-     ).on("end", emitter.emit.bind(emitter, "end"));
+     var stream = new EventEmitter();
+     var emitter = new FunctionImageStream(stream, decodeUriParameter);
      var decoder = new EventEmitter();
      function chunkSliceLength(chunk, buffer){
       var l = chunk.length;
@@ -221,7 +233,6 @@ function handlePost(request, response){
       "data",
       function(chunk){
        //TODO make a stream class that buffers based on an integer function of the chunk
-       //TODO make a stream class that passes takes the image of each chunk under a function
        var i = chunkSliceLength(chunk, buffer);
        if(0 >= i) return buffer += chunk;
        stream.emit("data", buffer + chunk.slice(0, i));
@@ -235,8 +246,7 @@ function handlePost(request, response){
        stream.emit("end");
       }
      );
-     //TODO simplify forwarding
-     new SlicingStream(param.andAfter, 1).on("data", decoder.emit.bind(decoder, "data")).on("end", decoder.emit.bind(decoder, "end"));
+     pipeStream(new SlicingStream(param.andAfter, 1), decoder);
      param.andAfter.resume();
      formStreamEmitter.emit(channel, emitter);
     }
