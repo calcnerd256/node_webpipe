@@ -203,6 +203,12 @@ function handlePost(request, response){
     function(channel){
      var buffer = "";
      var emitter = new EventSponge();
+     var stream = new EventEmitter().on(
+      "data",
+      function(chunk){
+       return emitter.emit("data", decodeURIComponent(chunk.toString()).replace("+", " "));
+      }
+     ).on("end", emitter.emit.bind(emitter, "end"));
      var decoder = new EventEmitter();
      decoder.on(
       "data",
@@ -215,18 +221,15 @@ function handlePost(request, response){
         i = chunk.length - 2;
        else if(0x25 == chunk[chunk.length - 1])
         i = chunk.length - 1;
-       emitter.emit(
-        "data",
-        decodeURIComponent(chunk.slice(0, i).toString()).replace("+", " ")
-       );
+       stream.emit("data", buffer + chunk.slice(0, i));
        buffer = chunk.slice(i);
       }
      ).on(
       "end",
       function(){
        if(buffer)
-        emitter.emit("data", decodeURIComponent(buffer).replace("+", " "));
-       emitter.emit("end");
+        stream.emit("data", buffer);
+       stream.emit("end");
       }
      );
      //TODO simplify forwarding
