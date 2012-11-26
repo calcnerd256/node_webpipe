@@ -201,10 +201,9 @@ function handlePost(request, response){
 
  //the request is a readable stream, so it emits "data" events and a "done" event
 
+ //this function assumes the content type of the POST body is application/x-www-form-urlencoded
+ // it would be better to actually check
 
- //here's some experiment that will become a better streaming implementation of what was buffered before
-
- // this function assumes the content type of the POST body is application/x-www-form-urlencoded
  var form = {};
  var formEmitter = new EventEmitter();
  var formStreamEmitter = new EventEmitter();
@@ -224,6 +223,12 @@ function handlePost(request, response){
    emitter.emit("end");
   }
  );
+ //what happens if there is no str event?
+ //I should probably handle "end" just in case
+ //furthermore, what if there's a POST parameter called "end"?
+ //I should probably not use the parameter name as the channel
+ // a prefix will suffice, or I can use the name as an argument
+ // I think I prefer the prefx, so I can filter on it with the native event logic
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
@@ -241,15 +246,9 @@ function handlePost(request, response){
   }
  ).resume();//the resume is necessary because it starts paused to avoid a race condition
   //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
-  // we just want to take the "src" out of the parsed POST body
+  // we just want to take the "str" out of the parsed POST body
   // and we want to pass that to our child process through standard input
   // the child process then writes its standard output, which we forward to the HTTP response
-
-  //using concatenation to force coercion is kind of tacky
-  //but it was shorter than doing all the necessary checks to ensure that dictionary.str existed and was a string or had a .toString() method
-  //if we pass something to stdin.write that isn't a string or buffer, it would throw an exception
-  //and if we don't catch that exception, it'll bring the whole server down
-  //so it's easiest to just make sure that str is always a string, no matter what the user sent us in the POST request body
 
   //send the whole thing along to the child process
 
@@ -262,4 +261,12 @@ function handlePost(request, response){
   }
  );
  kid.stdout.on("end", function(){response.end();});
+ //these could instead be written as
+ //kid.stdout.on("data", response.write.bind(response)).on("end", response.end.bind(response));
+ //but I worry that that's harder to read
+ //but it's so nice, because it's really close to being something I can generate from data
+ //like (function(source, mapping, target){for(key in mapping)source.on(key, target[mapping[key]].bind(target));})(kid.stdout, {"data": "write", "end", "end"}, response);
+ //and if I built that ugly function up out of simpler primitives,
+ // I could have some really expressive code represented as common functions and pure data
+ // instead of creating one-off anonymous functions everywhere
 }
