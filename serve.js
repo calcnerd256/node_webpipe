@@ -204,8 +204,15 @@ function handlePost(request, response){
  //this function assumes the content type of the POST body is application/x-www-form-urlencoded
  // it would be better to actually check
 
- var form = {};
- var formEmitter = new EventEmitter();
+ //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
+ // we just want to take the "str" out of the parsed POST body
+ // and we want to pass that to our child process through standard input
+ // the child process then writes its standard output, which we forward to the HTTP response
+ // so most of this method is plumbing, redirecting I/O around within the rest of the program
+
+ //send the whole thing along to the child process
+
+
  var formStreamEmitter = new EventEmitter();
  var i = kid.stdin;
  formStreamEmitter.on(
@@ -214,44 +221,83 @@ function handlePost(request, response){
    stream.on("data", i.write.bind(i)).on("end", i.end.bind(i)).resume();
   }
  );
- formEmitter.on(
-  "str",
-  function(str){
-   var emitter = new EventSponge();
-   formStreamEmitter.emit("str", emitter);
-   emitter.emit("data", str);
-   emitter.emit("end");
-  }
- );
  //what happens if there is no str event?
  //I should probably handle "end" just in case
  //furthermore, what if there's a POST parameter called "end"?
  //I should probably not use the parameter name as the channel
  // a prefix will suffice, or I can use the name as an argument
  // I think I prefer the prefx, so I can filter on it with the native event logic
+
+ function SingleCharacterSingleSplitter(stream, delimiter){
+  this.delimiter = delimiter;
+  this.before = new EventSponge();
+  this.andAfter = new EventSponge();
+  this.foundIt = false;
+  this.events = new EventEmitter();
+  stream.on("data", this.handleChunk.bind(this));
+  stream.on("end", this.end.bind(this));
+ }
+ SingleCharacterSingleSplitter.prototype.handleChunk = function(chunk){
+  if(this.foundIt) return this.andAfter.emit("data", chunk);
+  var i = chunk.toString().indexOf(this.delimiter);
+  if(-1 == i) return this.before.emit("data", chunk);
+  this.before.emit("data", chunk.slice(0, i));
+  this.andAfter.emit("data", chunk.slice(i));
+  this.foundIt = true;
+  this.before.emit("end");
+ }
+ SingleCharacterSingleSplitter.prototype.end = function(){
+  this.events.emit("end");
+  if(!this.foundIt) this.before.emit("end");
+  this.andAfter.emit("end");
+ }
+
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
+   param = new SingleCharacterSingleSplitter(lexer.resume(), "=");
    bufferChunks(
-    lexer,
-    function(param){
-     var pair = decodeUrlencodedParameter(param);
-     var key = pair[0];
-     var value = pair[1];
-     form[key] = value;
-     formEmitter.emit(key, value);
+    param.before.resume(),
+    function(channel){
+     var stream = param.andAfter;
+     var buffer = "";
+     var emitter = new EventSponge();
+     var decoder = new EventEmitter();
+     decoder.on(
+      "data",
+      function(chunk){
+       if(2 > chunk.length) return buffer += chunk;
+       var i = chunk.length;
+       if(0x25 == chunk[chunk.length - 2])
+        i = chunk.length - 2;
+       else if(0x25 == chunk[chunk.length - 1])
+        i = chunk.length - 1;
+       emitter.emit(
+        "data",
+        decodeURIComponent(chunk.slice(0, i).toString()).replace("+", " ")
+       );
+       buffer = chunk.slice(i);
+      }
+     ).on(
+      "end",
+      function(){
+       if(buffer)
+        emitter.emit("data", decodeURIComponent(buffer).replace("+", " "));
+       emitter.emit("end");
+      }
+     );
+     stream.once(
+      "data",
+      function(chunk){
+       decoder.emit("data", chunk.slice(1));
+       stream.on("data", decoder.emit.bind(decoder, "data"));
+      }
+     ).on("end", decoder.emit.bind(decoder, "end")).resume();
+     formStreamEmitter.emit(channel, emitter);
     }
    );
-   lexer.resume();
   }
  ).resume();//the resume is necessary because it starts paused to avoid a race condition
-  //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
-  // we just want to take the "str" out of the parsed POST body
-  // and we want to pass that to our child process through standard input
-  // the child process then writes its standard output, which we forward to the HTTP response
-
-  //send the whole thing along to the child process
-
 
  //redirect the standard output of the child process to the HTTP response body
  kid.stdout.on(
