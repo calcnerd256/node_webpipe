@@ -210,17 +210,20 @@ function handlePost(request, response){
       }
      ).on("end", emitter.emit.bind(emitter, "end"));
      var decoder = new EventEmitter();
+     function chunkSliceLength(chunk, buffer){
+      var l = chunk.length;
+      if(2 > l) return 0;
+      if(0x25 == chunk[l - 2]) return l - 2;
+      if(0x25 == chunk[l - 1]) return l - 1;
+      return l;
+     }
      decoder.on(
       "data",
       function(chunk){
        //TODO make a stream class that buffers based on an integer function of the chunk
        //TODO make a stream class that passes takes the image of each chunk under a function
-       if(2 > chunk.length) return buffer += chunk;
-       var i = chunk.length;
-       if(0x25 == chunk[chunk.length - 2])
-        i = chunk.length - 2;
-       else if(0x25 == chunk[chunk.length - 1])
-        i = chunk.length - 1;
+       var i = chunkSliceLength(chunk, buffer);
+       if(0 >= i) return buffer += chunk;
        stream.emit("data", buffer + chunk.slice(0, i));
        buffer = chunk.slice(i);
       }
