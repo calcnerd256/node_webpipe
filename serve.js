@@ -7,6 +7,9 @@
    events
     EventEmitter
    ./streams
+    EventSponge
+    SingleCharacterSingleSplitter
+    SingleCharacterDelimiterLexerEmitter
     compose(f, g)
     bufferChunks(stream, callback)
   configuration state
@@ -28,8 +31,9 @@ var child_process = require("child_process");
 var events = require("events");
  var EventEmitter = events.EventEmitter;
 var streamHelpers = require("./streams");
- var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
  var EventSponge = streamHelpers.EventSponge;
+ var SingleCharacterSingleSplitter = streamHelpers.SingleCharacterSingleSplitter;
+ var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
  var bufferChunks = streamHelpers.bufferChunks;
  var compose = streamHelpers.compose;
 
@@ -161,37 +165,7 @@ function fluentPatch(key, value){
  this[key] = value;
  return this;
 }
-function decodeUrlencodedParameter(str){
- // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
- return str.replace("+", " ").split("=").map(decodeURIComponent);
-}
-function parseUrlencodedForm(body){
- // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
- // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
- var parameters = body.split("&");
- var decodeParameter = decodeUrlencodedParameter;
- //an "alist" (attribute list) in Lisp is a list of pairs,
- // where each pair is <key, value>
- //here, instead of pairs, I'm using lists of length two
- //so the "alist" variable is a list of lists,
- // and the inner lists are each of length two
- var alist = parameters.map(decodeParameter);
- var result = {};
- // the following comments are all different ways to do what the line after them does
- /*
- for(var i = 0; i < alist.length; i++){
-  var keyValuePair = alist[i];
-  var key = keyValuePair[0];
-  var value = keyValuePair[1];
-  result[key] = value;
- }
- */
- //alist.map(function(kv){result[kv[0]] = kv[1];});
- //alist.map(function(angs){fluentPatch.call(result, args[0], args[1]);});
- //alist.map(function(args){fluentPatch.apply(result, args);});
- alist.map(Function.prototype.apply.bind(fluentPatch, result));
- return result;
-}
+
 
 function handlePost(request, response){
  response.writeHead(200, {"Content-type": "image/svg+xml"});
@@ -203,6 +177,7 @@ function handlePost(request, response){
 
  //this function assumes the content type of the POST body is application/x-www-form-urlencoded
  // it would be better to actually check
+ // http://www.w3.org/TR/html401/interact/forms.html#adef-enctype
 
  //since the form presented in response to the GET request has only one field, and that field is a textarea called "str",
  // we just want to take the "str" out of the parsed POST body
@@ -210,10 +185,9 @@ function handlePost(request, response){
  // the child process then writes its standard output, which we forward to the HTTP response
  // so most of this method is plumbing, redirecting I/O around within the rest of the program
 
- //send the whole thing along to the child process
-
-
  var formStreamEmitter = new EventEmitter();
+
+ //send the whole thing along to the child process
  var i = kid.stdin;
  formStreamEmitter.on(
   "str",
@@ -228,30 +202,8 @@ function handlePost(request, response){
  // a prefix will suffice, or I can use the name as an argument
  // I think I prefer the prefx, so I can filter on it with the native event logic
 
- function SingleCharacterSingleSplitter(stream, delimiter){
-  this.delimiter = delimiter;
-  this.before = new EventSponge();
-  this.andAfter = new EventSponge();
-  this.foundIt = false;
-  this.events = new EventEmitter();
-  stream.on("data", this.handleChunk.bind(this));
-  stream.on("end", this.end.bind(this));
- }
- SingleCharacterSingleSplitter.prototype.handleChunk = function(chunk){
-  if(this.foundIt) return this.andAfter.emit("data", chunk);
-  var i = chunk.toString().indexOf(this.delimiter);
-  if(-1 == i) return this.before.emit("data", chunk);
-  this.before.emit("data", chunk.slice(0, i));
-  this.andAfter.emit("data", chunk.slice(i));
-  this.foundIt = true;
-  this.before.emit("end");
- }
- SingleCharacterSingleSplitter.prototype.end = function(){
-  this.events.emit("end");
-  if(!this.foundIt) this.before.emit("end");
-  this.andAfter.emit("end");
- }
 
+ // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
  new SingleCharacterDelimiterLexerEmitter(request, "&").on(
   "lexer",
   function(lexer){
@@ -266,6 +218,8 @@ function handlePost(request, response){
      decoder.on(
       "data",
       function(chunk){
+       //TODO make a stream class that buffers based on an integer function of the chunk
+       //TODO make a stream class that passes takes the image of each chunk under a function
        if(2 > chunk.length) return buffer += chunk;
        var i = chunk.length;
        if(0x25 == chunk[chunk.length - 2])
@@ -286,6 +240,7 @@ function handlePost(request, response){
        emitter.emit("end");
       }
      );
+     //TODO make a stream class that slices off the first n bytes
      stream.once(
       "data",
       function(chunk){
