@@ -321,6 +321,80 @@ VaryingBufferStream.prototype.on = function on(){
  return this;
 }
 
+ function forwardChannel(source, channel, target){
+  return source.on(channel, target.emit.bind(target, channel));
+ }
+ function pipeStream(source, target){
+  return forwardChannel(
+   forwardChannel(source, "data", target),
+   "end",
+   target
+  );
+ }
+
+
+// http://www.w3.org/TR/html401/interact/forms.html#form-content-type
+function decodeUriParameter(chunk){
+ return decodeURIComponent(
+  chunk.toString().replace("+", " ")
+ );
+}
+function uriEncodedChunkSliceLength(chunk, buffer){
+ var l = chunk.length;
+ if(2 > l) return 0;
+ if(0x25 == chunk[l - 2]) return l - 2;
+ if(0x25 == chunk[l - 1]) return l - 1;
+ return l;
+}
+
+function FormStream(){
+ this.input = new EventEmitter();
+ this.output = new EventEmitter();
+ var that = this;
+ new SingleCharacterDelimiterLexerEmitter(this.input, "&").on(
+  "lexer",
+  this.handleLexer.bind(this)
+ ).on(
+  "end",
+  this.output.emit.bind(this.output, "end")
+ ).resume();//the resume is necessary because it starts paused to avoid a race condition
+}
+FormStream.decodeUriParameter = decodeUriParameter;
+FormStream.uriEncodedChunkSliceLength = uriEncodedChunkSliceLength;
+FormStream.prototype.emit = function emit(){
+ this.input.emit.apply(this.input, arguments);
+ return this;
+}
+FormStream.prototype.write = function write(chunk){
+ return this.emit("data", chunk);
+}
+FormStream.prototype.on = function on(){
+ this.output.on.apply(this.output, arguments);
+ return this;
+}
+FormStream.prototype.handleLexer = function handleLexer(lexer){
+ param = new SingleCharacterSingleSplitter(lexer.resume(), "=");
+ bufferChunks(
+  param.before,
+  function(channel){
+   var input = param.andAfter;
+   this.output.emit(
+    channel,
+    new FunctionImageStream(
+     new VaryingBufferStream(
+      new SlicingStream(input, 1),
+      uriEncodedChunkSliceLength
+     ),
+     decodeUriParameter
+    )
+   );
+   input.resume();
+  }.bind(this)
+ );
+ param.before.resume();
+}
+
+
 this.EventSponge = EventSponge;
 this.SingleCharacterSingleSplitter = SingleCharacterSingleSplitter;
 this.SingleCharacterDelimiterLexerEmitter = SingleCharacterDelimiterLexerEmitter;
@@ -330,3 +404,6 @@ this.bufferChunks = bufferChunks;
 this.SlicingStream = SlicingStream;
 this.FunctionImageStream = FunctionImageStream;
 this.VaryingBufferStream = VaryingBufferStream;
+this.forwardChannel = forwardChannel;
+this.pipeStream = pipeStream;
+this.FormStream = FormStream;

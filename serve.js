@@ -32,6 +32,8 @@ var child_process = require("child_process");
 var events = require("events");
  var EventEmitter = events.EventEmitter;
 var streamHelpers = require("./streams");
+ var pipeStream = streamHelpers.pipeStream;
+ var FormStream = streamHelpers.FormStream;
  var EventSponge = streamHelpers.EventSponge;
  var SingleCharacterSingleSplitter = streamHelpers.SingleCharacterSingleSplitter;
  var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
@@ -180,7 +182,7 @@ function handlePost(request, response){
  // the child process then writes its standard output, which we forward to the HTTP response
  // so most of this method is plumbing, redirecting I/O around within the rest of the program
 
- var formStreamEmitter = new EventEmitter();
+ var formStreamEmitter = new FormStream();
 
  //send the whole thing along to the child process
  var i = kid.stdin;
@@ -197,51 +199,7 @@ function handlePost(request, response){
  // a prefix will suffice, or I can use the name as an argument
  // I think I prefer the prefx, so I can filter on it with the native event logic
 
- // http://www.w3.org/TR/html401/interact/forms.html#form-content-type
- function decodeUriParameter(chunk){
-  return decodeURIComponent(
-   chunk.toString().replace("+", " ")
-  );
- }
- function chunkSliceLength(chunk, buffer){
-  var l = chunk.length;
-  if(2 > l) return 0;
-  if(0x25 == chunk[l - 2]) return l - 2;
-  if(0x25 == chunk[l - 1]) return l - 1;
-  return l;
- }
- new SingleCharacterDelimiterLexerEmitter(request, "&").on(
-  "lexer",
-  function(lexer){
-   param = new SingleCharacterSingleSplitter(lexer.resume(), "=");
-   function forwardChannel(source, channel, target){
-    return source.on(channel, target.emit.bind(target, channel));
-   }
-   function pipeStream(source, target){
-    return forwardChannel(
-     forwardChannel(source, "data", target),
-     "end",
-     target
-    );
-   }
-   bufferChunks(
-    param.before.resume(),
-    function(channel){
-     formStreamEmitter.emit(
-      channel,
-      new FunctionImageStream(
-       new VaryingBufferStream(
-        new SlicingStream(param.andAfter, 1),
-        chunkSliceLength
-       ),
-       decodeUriParameter
-      )
-     );
-     param.andAfter.resume();
-    }
-   );
-  }
- ).resume();//the resume is necessary because it starts paused to avoid a race condition
+ pipeStream(request, formStreamEmitter)
 
  //redirect the standard output of the child process to the HTTP response body
  kid.stdout.on(
