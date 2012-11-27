@@ -165,16 +165,20 @@ function handlePost(request, response){
  // the child process then writes its standard output, which we forward to the HTTP response
 
  //send the whole thing along to the child process
- var i = kid.stdin;
- pipeStream(
-  request,
-  new FormStream().on(
-   "_str",
-   function(stream){
-    stream.on("data", i.write.bind(i)).on("end", i.end.bind(i)).resume();
-   }
-  ).on("end", i.end.bind(i))//in case the POST request has no "str" parameter
- );
+ var form = new FormStream();
+ function forwardToChildProcess(stream){
+  stream.on(
+   "data",
+   function(chunk){kid.stdin.write(chunk);}
+  );
+  stream.on(
+   "end",
+   function(){kid.stdin.end();}
+  );
+  stream.resume();
+ }
+ form.on("_str", forwardToChildProcess);
+ form.on("end", function(){kid.stdin.end();})//in case the POST request has no "str" parameter
 
  //redirect the standard output of the child process to the HTTP response body
  kid.stdout.on(
@@ -183,4 +187,7 @@ function handlePost(request, response){
    response.write(chunk);
   }
  ).on("end", function(){response.end();});
+
+ //finally, begin reading the form data from the POST request
+ pipeStream(request, form);
 }
