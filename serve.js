@@ -4,17 +4,9 @@
   requires
    http
    child_process
-   events
-    EventEmitter
    ./streams
-    EventSponge
-    SingleCharacterSingleSplitter
-    SingleCharacterDelimiterLexerEmitter
-    SlicingStream
-    FunctionImageStream
-    VaryingBufferStream
-    compose(f, g)
-    bufferChunks(stream, callback)
+    pipeStream(source, target)
+    FormStream
   configuration state
    port
    verbose
@@ -29,19 +21,9 @@
 //http library documented at http://nodejs.org/api/http.html
 var http = require("http");
 var child_process = require("child_process");
-var events = require("events");
- var EventEmitter = events.EventEmitter;
 var streamHelpers = require("./streams");
  var pipeStream = streamHelpers.pipeStream;
  var FormStream = streamHelpers.FormStream;
- var EventSponge = streamHelpers.EventSponge;
- var SingleCharacterSingleSplitter = streamHelpers.SingleCharacterSingleSplitter;
- var SingleCharacterDelimiterLexerEmitter = streamHelpers.SingleCharacterDelimiterLexerEmitter;
- var SlicingStream = streamHelpers.SlicingStream;
- var FunctionImageStream = streamHelpers.FunctionImageStream;
- var VaryingBufferStream = streamHelpers.VaryingBufferStream;
- var compose = streamHelpers.compose;
- var bufferChunks = streamHelpers.bufferChunks;
 
 var port = 8080; //typically 80
 var verbose = false;
@@ -164,6 +146,7 @@ function handleGet(request, response){
 }
 
 
+
 function handlePost(request, response){
  response.writeHead(200, {"Content-type": "image/svg+xml"});
  var command = "dot";//this is what you would run at the command line
@@ -180,26 +163,18 @@ function handlePost(request, response){
  // we just want to take the "str" out of the parsed POST body
  // and we want to pass that to our child process through standard input
  // the child process then writes its standard output, which we forward to the HTTP response
- // so most of this method is plumbing, redirecting I/O around within the rest of the program
-
- var formStreamEmitter = new FormStream();
 
  //send the whole thing along to the child process
  var i = kid.stdin;
- formStreamEmitter.on(
-  "str",
-  function(stream){
-   stream.on("data", i.write.bind(i)).on("end", i.end.bind(i)).resume();
-  }
+ pipeStream(
+  request,
+  new FormStream().on(
+   "_str",
+   function(stream){
+    stream.on("data", i.write.bind(i)).on("end", i.end.bind(i)).resume();
+   }
+  ).on("end", i.end.bind(i))//in case the POST request has no "str" parameter
  );
- //what happens if there is no str event?
- //I should probably handle "end" just in case
- //furthermore, what if there's a POST parameter called "end"?
- //I should probably not use the parameter name as the channel
- // a prefix will suffice, or I can use the name as an argument
- // I think I prefer the prefx, so I can filter on it with the native event logic
-
- pipeStream(request, formStreamEmitter)
 
  //redirect the standard output of the child process to the HTTP response body
  kid.stdout.on(
@@ -207,14 +182,5 @@ function handlePost(request, response){
   function(chunk){
    response.write(chunk);
   }
- );
- kid.stdout.on("end", function(){response.end();});
- //these could instead be written as
- //kid.stdout.on("data", response.write.bind(response)).on("end", response.end.bind(response));
- //but I worry that that's harder to read
- //but it's so nice, because it's really close to being something I can generate from data
- //like (function(source, mapping, target){for(key in mapping)source.on(key, target[mapping[key]].bind(target));})(kid.stdout, {"data": "write", "end", "end"}, response);
- //and if I built that ugly function up out of simpler primitives,
- // I could have some really expressive code represented as common functions and pure data
- // instead of creating one-off anonymous functions everywhere
+ ).on("end", function(){response.end();});
 }

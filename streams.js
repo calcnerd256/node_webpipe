@@ -379,7 +379,7 @@ FormStream.prototype.handleLexer = function handleLexer(lexer){
   function(channel){
    var input = param.andAfter;
    this.output.emit(
-    channel,
+    "_" + channel,
     new FunctionImageStream(
      new VaryingBufferStream(
       new SlicingStream(input, 1),
