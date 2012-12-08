@@ -6,6 +6,9 @@ You can kill it with C-c (that is, Control+C) at the command line whence you ran
 You can visit your webserver at [[http://127.0.0.1:15216/]].
 You will need [[http://www.graphviz.org][GraphViz]] for this to work.
 
+** JavaScript
+I assume my audience has no JavaScript experience but knows how to program and knows enough math to learn new definitions.
+If I say something that requires prerequisite knowledge and I don't include a hyperlink to that information, please let me know.
 ** NodeJS
 serve.js is written in [[http://docs.webplatform.org/wiki/javascript][JavaScript]].
 Particularly, it is written in [[http://www.nodejs.org][Node]], a command-line [[http://code.google.com/p/v8/][V8]] with [[http://www.opengroup.org/austin/papers/posix_faq.html][POSIX]]-like libraries.

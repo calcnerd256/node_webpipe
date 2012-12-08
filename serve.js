@@ -1,6 +1,12 @@
-//http library documented at http://nodejs.org/api/http.html
 var http = require("http");
+//ECMAScript "var" keyword documented at http://interglacial.com/javascript_spec/a-12.html#a-12.2
+//CommonJS "require" function documented at http://wiki.commonjs.org/wiki/Modules/1.1#Module_Context
+//NodeJS "http" library documented at http://nodejs.org/api/http.html
+
+//NodeJS child_process library documented at http://nodejs.org/api/child_process.html
 var child_process = require("child_process");
+
+//local file "streams.js" poorly written and not documented yet
 var streamHelpers = require("./streams");
  var pipeStream = streamHelpers.pipeStream;
  var FormStream = streamHelpers.FormStream;
@@ -16,7 +22,9 @@ function init(){
  return server;
 }
 
-init();
+//init() sets up the server, which listens on port 15216 and calls respond() on every request
+init();//this line does all the work in the whole file; everything else is definitions
+//init() causes afterServerSetup() to be called when the server is ready to accept HTTP requests
 
 function afterServerSetup(){
  var noisy = verbose;
