@@ -7,10 +7,10 @@ You can visit your webserver at [[http://127.0.0.1:15216/]].
 You will need [[http://www.graphviz.org][GraphViz]] for this to work.
 
 ** JavaScript
-I assume my audience has no JavaScript experience but knows how to program and knows enough math to learn new definitions.
+I assume my audience has no [[https://developer.mozilla.org/en-US/docs/JavaScript][JavaScript]] experience but knows how to program and knows enough math to learn new definitions.
 If I say something that requires prerequisite knowledge and I don't include a hyperlink to that information, please let me know.
 
-[[https://developer.mozilla.org/en-US/docs/JavaScript][JavaScript]] comes from [[http://www.ecmascript.org/][ECMAScript]] and has [[http://stackoverflow.com/a/2018747][nothing]] to do with [[http://www.oracle.com/technetwork/java/][Java]].
+JavaScript comes from [[http://www.ecmascript.org/][ECMAScript]] and has [[http://stackoverflow.com/a/2018747][nothing]] to do with [[http://www.oracle.com/technetwork/java/][Java]].
 JavaScript is [[http://c2.com/cgi/wiki?ProceduralProgramming][procedural]], so you read a program from top to bottom, executing each statement in order.
 C ends statements with semicolons. JavaScript tries to be clever and infer semicolons where they're omitted.
  This can lead to problems. Include semicolons at the end of your statements, and be careful about your line breaks.
@@ -25,6 +25,8 @@ If you try to refer to a variable and you don't use var, JavaScript will use wha
 If it doesn't find one, it will create one in the global scope. This is usually not what we want.
 So be careful to declare your variables, because it will fail subtly instead of blowing up.
 
+The "var" keyword "[[http://www.adequatelygood.com/2010/2/JavaScript-Scoping-and-Hoisting][hoist]]"s your variable declarations to the beginning of the scope, which can be counterintuitive.
+
 *** assignment
 Like in C, assignment in JavaScript is a statement surrounding an infix "=" operator
  whose left-hand side is an expression that evaluates to an lvalue
@@ -35,6 +37,7 @@ An lvalue is a value that can be used to store things. A variable is an lvalue. 
 In C, you can take the address of an lvalue.
 You can declare a variable and assign it in the same statement, if you want.
 : var x = 0;
+If you do that, only the declaration is hoisted.
 
 ** NodeJS
 serve.js is written in [[http://docs.webplatform.org/wiki/javascript][JavaScript]].
