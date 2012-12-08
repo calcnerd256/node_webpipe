@@ -10,8 +10,8 @@ You will need [[http://www.graphviz.org][GraphViz]] for this to work.
 I assume my audience has no JavaScript experience but knows how to program and knows enough math to learn new definitions.
 If I say something that requires prerequisite knowledge and I don't include a hyperlink to that information, please let me know.
 
-JavaScript comes from ECMAScript and has nothing to do with Java.
-JavaScript is procedural, so you read a program from top to bottom, executing each statement in order.
+[[https://developer.mozilla.org/en-US/docs/JavaScript][JavaScript]] comes from [[http://www.ecmascript.org/][ECMAScript]] and has [[http://stackoverflow.com/a/2018747][nothing]] to do with [[http://www.oracle.com/technetwork/java/][Java]].
+JavaScript is [[http://c2.com/cgi/wiki?ProceduralProgramming][procedural]], so you read a program from top to bottom, executing each statement in order.
 C ends statements with semicolons. JavaScript tries to be clever and infer semicolons where they're omitted.
  This can lead to problems. Include semicolons at the end of your statements, and be careful about your line breaks.
  The rules for when a line break is interpreted as a semicolon are beyond the scope of this document.
