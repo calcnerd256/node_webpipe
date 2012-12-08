@@ -20,7 +20,6 @@ C ends statements with semicolons. JavaScript tries to be clever and infer semic
 JavaScript has lexical scoping. (TO DO: explain lexical scoping)
 There's a global scope, and functions get their own scopes.
 **** var
-# linktarget variable declaration linktarget
 To create a variable in the local scope, we use the "var" keyword.
 If you try to refer to a variable and you don't use var, JavaScript will use whatever existing variable by that name is in the current scope.
 If it doesn't find one, it will create one in the global scope. This is usually not what we want.
@@ -34,7 +33,7 @@ Like in C, assignment in JavaScript is a statement surrounding an infix "=" oper
   that evaluates to the lvalue of the left-hand side's new value.
 An lvalue is a value that can be used to store things. A variable is an lvalue. A number is not. You can't say "0 = 1" and store 1 in 0.
 In C, you can take the address of an lvalue.
-You can [[linktarget variable declaration linktarget][declare]] a variable and assign it in the same statement, if you want.
+You can declare a variable and assign it in the same statement, if you want.
 : var x = 0;
 
 ** NodeJS
