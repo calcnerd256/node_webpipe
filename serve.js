@@ -6,10 +6,12 @@ var http = require("http");
 //NodeJS child_process library documented at http://nodejs.org/api/child_process.html
 var child_process = require("child_process");
 
-//local file "streams.js" poorly written and not documented yet
-var streamHelpers = require("./streams");
- var pipeStream = streamHelpers.pipeStream;
- var FormStream = streamHelpers.FormStream;
+// ./package.json cites a dependency upon my "form_stream" project on github
+//  use npm, the Node package manager, to install it
+//  https://npmjs.org/
+var formStream = require("form_stream");
+ var pipeStream = formStream.pipeStream;
+ var FormStream = formStream.FormStream;
 
 var port = 8080; //typically 80
 var verbose = false;
@@ -89,7 +91,7 @@ function handlePost(request, response){
   );
   stream.resume();
  }
- form.on("_str", forwardToChildProcess);
+ form.on("s_str", forwardToChildProcess);
  form.on("end", function(){kid.stdin.end();})//in case the POST request has no "str" parameter
 
  kid.stdout.on(
