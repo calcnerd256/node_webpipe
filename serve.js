@@ -43,20 +43,20 @@ function respond(request, response){
   return handleGet(request, response);
  return handlePost(request, response);
 }
+function getFortune(request, response){
+ var cow = child_process.spawn("cowsay", ["-n"]);
+ var fortune = child_process.spawn("fortune");
+ fortune.stdout.pipe(cow.stdin);
+ cow.stdout.pipe(response);
+ cow.stderr.pipe(response);
+ fortune.stderr.pipe(response);
+ return response;
+}
 function handleGet(request, response){
 
  if("/fortune" == request.url)
   // you'll need to install fortune-mod and cowsay for this
-  return (
-   function(cow){
-    var fortune = child_process.spawn("fortune");
-    fortune.stdout.pipe(cow.stdin);
-    cow.stdout.pipe(response);
-    cow.stderr.pipe(response);
-    fortune.stderr.pipe(response);
-    return response;
-   }
-  )(child_process.spawn("cowsay", ["-n"]));
+  return getFortune(request, response);
 
  var statusCode = 200;
  var contentType = "text/html";
