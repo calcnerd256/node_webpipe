@@ -70,6 +70,7 @@ function handleGet(request, response){
   " <body>",
   "  <form method=\"POST\">",
   "   <input type=\"submit\"></input>",
+  "   <br />",
   "   <textarea name=\"str\" cols=\"80\" rows=\"20\">",
       "digraph{",
       " a->b;",
