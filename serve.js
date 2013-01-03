@@ -69,13 +69,15 @@ function handleGet(request, response){
   " </head>",
   " <body>",
   "  <form method=\"POST\">",
-  "   <textarea name=\"str\">",
+  "   <input type=\"submit\"></input>",
+  "   <textarea name=\"str\" cols=\"80\" rows=\"20\">",
       "digraph{",
       " a->b;",
       "}",
      "</textarea>",
   "   <input type=\"submit\"></input>",
   "  </form>",
+  "  <a href=\"/fortune\">fortune</a>(6)",
   " </body>",
   "</html>"
  ];
