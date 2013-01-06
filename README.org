@@ -1,6 +1,9 @@
 * NodeJS server for GraphViz
 ** What it does
 If you run serve.js with [[http://www.nodejs.org][NodeJS]], it will create a webserver on your computer.
+Before you can run it, though, you'll need to install its dependencies with [[https://npmjs.org/][npm]], the Node Package Manager.
+: npm install
+: node serve.js
 This webserver will listen on port 15216 until you kill the process.
 You can kill it with C-c (that is, Control+C) at the command line whence you ran it.
 You can visit your webserver at [[http://127.0.0.1:15216/]].

@@ -105,8 +105,12 @@ function handlePost(request, response){
    "end",
    function(){kid.stdin.end();}
   );
+  stream.on("error", function(){console.warn(arguments);})
   stream.resume();
  }
+ //unfortunately, the library I'm using requires me to prefix the field name with "s_"
+ //unfortunately, the library I'm using isn't well-documented
+ //unfortunately, I wrote the library I'm using
  form.on("s_str", forwardToChildProcess);
  form.on("end", function(){kid.stdin.end();})//in case the POST request has no "str" parameter
 
